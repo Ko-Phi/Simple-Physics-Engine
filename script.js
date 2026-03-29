@@ -1,8 +1,8 @@
 function program() {
-  title("T");
-  size(900, 600);
-
-  // All code goes here
+  title("Mass Object Collision Handler");
+  size(1800, 1200);
+  const canvasHalfWidth = width / 2;
+  const canvasHalfHeight = height / 2;
   // no more radian jumpscare
 
   var FPS = 60;
@@ -99,11 +99,10 @@ function program() {
 
   angleMode = "radians";
   frameRate(FPS);
-  var dt = 60 / FPS;
-  var keys;
+  const dt = 60 / FPS;
 
   // quite small
-  var epsilon = 1e-6;
+  const epsilon = 1e-6;
   function rounD(num, deciPlace) {
     return round(num * pow(10, deciPlace)) / pow(10, deciPlace);
   }
@@ -117,12 +116,12 @@ function program() {
     }
   }
 
-  var idCount = 0;
-  var newid = function () {
+  let idCount = 0;
+  function newid() {
     return idCount++;
-  };
+  }
 
-  var keys = Array(100).fill(false);
+  let keys = Array(100).fill(false);
   function keyPressed() {
     keys[keyCode] = true;
   }
@@ -132,328 +131,295 @@ function program() {
 
   // componentInit: x, y
   // dirMagInit: dir, mag
-  function Vector(input1, input2, init) {
-    init = retDef(init, "component");
-    var x, y;
-    if (init === "component") {
-      x = input1;
-      y = input2;
-    } else if (init === "dirMag") {
-      x = input2 * cos(input1);
-      y = input2 * sin(input1);
+  class Vector {
+    constructor(input1, input2, init) {
+      init = retDef(init, "component");
+      let x, y;
+      if (init === "component") {
+        x = input1;
+        y = input2;
+      } else if (init === "dirMag") {
+        x = input2 * cos(input1);
+        y = input2 * sin(input1);
+      }
+      this.x = x;
+      this.y = y;
     }
-    this.x = x;
-    this.y = y;
+    sqMag = () => sq(this.x) + sq(this.y);
+    mag = () => sqrt(this.sqMag());
+    theta = () => atan2(this.y, this.x);
+    add(vector) {
+      if (!(vector instanceof Vector)) {
+        vector = new Vector(vector, vector);
+      }
+      return new Vector(this.x + vector.x, this.y + vector.y);
+    }
+    subtract(vector) {
+      if (!(vector instanceof Vector)) {
+        vector = new Vector(vector, vector);
+      }
+      return new Vector(this.x - vector.x, this.y - vector.y);
+    }
+    multiply(vector) {
+      if (!(vector instanceof Vector)) {
+        vector = new Vector(vector, vector);
+      }
+      return new Vector(this.x * vector.x, this.y * vector.y);
+    }
+    divide(vector) {
+      if (!(vector instanceof Vector)) {
+        vector = new Vector(vector, vector);
+      }
+      return new Vector(this.x / vector.x, this.y / vector.y);
+    }
+    normalize() {
+      var mag = this.mag();
+      if (mag === 0) {
+        return this;
+      }
+      return this.divide(new Vector(mag, mag));
+    }
+    dotProduct(vector) {
+      if (!(vector instanceof Vector)) {
+        vector = new Vector(vector, vector);
+      }
+      return this.x * vector.x + this.y * vector.y;
+    }
+    perpendicular = () => new Vector(-this.y, this.x);
+    display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
+    equalTo = (vector) => this.x === vector.x && this.y === vector.y;
   }
-  Vector.prototype.sqMag = function () {
-    return sq(this.x) + sq(this.y);
-  };
-  Vector.prototype.mag = function () {
-    return sqrt(this.sqMag());
-  };
-  Vector.prototype.theta = function () {
-    return atan2(this.y, this.x);
-  };
-  Vector.prototype.add = function (vector) {
-    if (!(vector instanceof Vector)) {
-      vector = new Vector(vector, vector);
-    }
-    return new Vector(this.x + vector.x, this.y + vector.y);
-  };
-  Vector.prototype.subtract = function (vector) {
-    if (!(vector instanceof Vector)) {
-      vector = new Vector(vector, vector);
-    }
-    return new Vector(this.x - vector.x, this.y - vector.y);
-  };
-  Vector.prototype.multiply = function (vector) {
-    if (!(vector instanceof Vector)) {
-      vector = new Vector(vector, vector);
-    }
-    return new Vector(this.x * vector.x, this.y * vector.y);
-  };
-  Vector.prototype.divide = function (vector) {
-    if (!(vector instanceof Vector)) {
-      vector = new Vector(vector, vector);
-    }
-    return new Vector(this.x / vector.x, this.y / vector.y);
-  };
-  Vector.prototype.normalize = function () {
-    var mag = this.mag();
-    if (mag === 0) {
-      return this;
-    }
-    return this.divide(new Vector(mag, mag));
-  };
-  Vector.prototype.dotProduct = function (vector) {
-    if (!(vector instanceof Vector)) {
-      vector = new Vector(vector, vector);
-    }
-    return this.x * vector.x + this.y * vector.y;
-  };
-  Vector.prototype.perpendicular = function () {
-    return new Vector(-this.y, this.x);
-  };
-  Vector.prototype.display = function () {
-    return rounD(this.x, 3) + ", " + rounD(this.y, 3);
-  };
-  Vector.prototype.equalTo = function (vector) {
-    return this.x === vector.x && this.y === vector.y;
-  };
 
-  var CustomSet = function () {
-    this.data = {};
-    this.size = 0;
-  };
-  CustomSet.prototype.contains = function (item) {
-    return this.data[item] !== undefined;
-  };
-  CustomSet.prototype.add = function (item) {
-    if (!this.contains(item)) {
-      this.data[item] = true;
-      this.size++;
-    }
-  };
-  CustomSet.prototype.remove = function (item) {
-    if (this.contains(item)) {
-      delete this.data[item];
-      this.size--;
-    }
-  };
-  CustomSet.prototype.clear = function () {
-    for (var item in this.data) {
-      delete this.data[item];
-    }
-  };
+  class Color {
+    constructor(c1, c2, c3, input1, input2) {
+      let alpha;
+      let model;
+      if (input1 === undefined) {
+        alpha = 255;
+        model = "RGB";
+      } else if (typeof input1 === "string") {
+        alpha = 255;
+        model = input1;
+      } else {
+        alpha = input1;
+        model = input2;
+      }
 
-  var Color = function (channels, model) {
-    this.channels = channels;
-    channels[3] = channels[3] || 255;
-    this.model = model || "RGB";
-    this.cachedValue = this.value();
-  };
-  Color.prototype.toRGB = function () {
-    if (this.model === "RGB") {
-      return;
-    }
-    var hue = this.channels[0];
-    var sat = this.channels[1];
-    var val = this.channels[2];
-    var hueP = hue / 60;
-    var chroma = val * sat;
-    var x = chroma * (1 - abs((hueP % 2) - 1));
-
-    var r;
-    var g;
-    var b;
-    if (hueP < 1) {
-      r = chroma;
-      g = x;
-      b = 0;
-    } else if (hueP < 2) {
-      r = x;
-      g = chroma;
-      b = 0;
-    } else if (hueP < 3) {
-      r = 0;
-      g = chroma;
-      b = x;
-    } else if (hueP < 4) {
-      r = 0;
-      g = x;
-      b = chroma;
-    } else if (hueP < 5) {
-      r = x;
-      g = 0;
-      b = chroma;
-    } else if (hueP < 6) {
-      r = chroma;
-      g = 0;
-      b = x;
+      this.channels = [c1, c2, c3, alpha];
+      this.channels[3] = retDef(this.channels[3], 255);
+      this.model = model || "RGB";
+      this.cachedValue = this.value();
     }
 
-    var m = val - chroma;
-    this.channels[0] = (r + m) * 255;
-    this.channels[1] = (g + m) * 255;
-    this.channels[2] = (b + m) * 255;
-    this.model = "RGB";
-  };
-  Color.prototype.toHSV = function () {
-    if (this.model === "HSV") {
-      return;
-    }
-    var rP = this.channels[0] / 255;
-    var gP = this.channels[1] / 255;
-    var bP = this.channels[2] / 255;
-    var cMax = max(rP, max(gP, bP));
-    var cMin = min(rP, min(gP, bP));
-    var delta = cMax - cMin;
+    toRGB() {
+      if (this.model === "RGB") {
+        return;
+      }
+      const hue = this.channels[0];
+      const sat = this.channels[1];
+      const val = this.channels[2];
+      const hueP = hue / 60;
+      const chroma = val * sat;
+      const x = chroma * (1 - abs((hueP % 2) - 1));
 
-    var hue;
-    var sat;
-    var val;
-    if (delta === 0) {
-      hue = 0;
-    }
-    if (cMax === rP) {
-      hue = (((gP - bP) / delta) % 6) * 60;
-    }
-    if (cMax === gP) {
-      hue = ((bP - rP) / delta + 2) * 60;
-    }
-    if (cMax === bP) {
-      hue = ((rP - gP) / delta + 4) * 60;
-    }
-    sat = cMax === 0 ? 0 : delta / cMax;
-    val = cMax;
+      let r;
+      let g;
+      let b;
+      if (hueP < 1) {
+        r = chroma;
+        g = x;
+        b = 0;
+      } else if (hueP < 2) {
+        r = x;
+        g = chroma;
+        b = 0;
+      } else if (hueP < 3) {
+        r = 0;
+        g = chroma;
+        b = x;
+      } else if (hueP < 4) {
+        r = 0;
+        g = x;
+        b = chroma;
+      } else if (hueP < 5) {
+        r = x;
+        g = 0;
+        b = chroma;
+      } else if (hueP < 6) {
+        r = chroma;
+        g = 0;
+        b = x;
+      }
 
-    this.channels[0] = hue;
-    this.channels[1] = sat;
-    this.channels[2] = val;
-    this.model = "HSV";
-  };
-  Color.prototype.value = function () {
-    if (this.model === "HSV") {
-      this.toRGB();
+      const m = val - chroma;
+      this.channels[0] = (r + m) * 255;
+      this.channels[1] = (g + m) * 255;
+      this.channels[2] = (b + m) * 255;
+      this.model = "RGB";
     }
-    return color(this.channels[0], this.channels[1], this.channels[2], this.channels[3]);
-  };
-  var newColor = function (c1, c2, c3, input1, input2) {
-    var alpha;
-    var model;
-    if (input1 === undefined) {
-      alpha = 255;
-      model = "RGB";
-    } else if (typeof input1 === "string") {
-      alpha = 255;
-      model = input1;
-    } else {
-      alpha = input1;
-      model = input2;
-    }
-    return new Color([c1, c2, c3, alpha], model);
-  };
+    toHSV() {
+      if (this.model === "HSV") {
+        return;
+      }
+      const rP = this.channels[0] / 255;
+      const gP = this.channels[1] / 255;
+      const bP = this.channels[2] / 255;
+      const cMax = max(rP, max(gP, bP));
+      const cMin = min(rP, min(gP, bP));
+      const delta = cMax - cMin;
 
-  var cellsChecked = 0;
-  function SpatialHashGrid(cellSize) {
-    this.grid = {};
-    this.cellSize = cellSize;
+      let hue;
+      let sat;
+      let val;
+      if (delta === 0) {
+        hue = 0;
+      }
+      if (cMax === rP) {
+        hue = (((gP - bP) / delta) % 6) * 60;
+      }
+      if (cMax === gP) {
+        hue = ((bP - rP) / delta + 2) * 60;
+      }
+      if (cMax === bP) {
+        hue = ((rP - gP) / delta + 4) * 60;
+      }
+      sat = cMax === 0 ? 0 : delta / cMax;
+      val = cMax;
+
+      this.channels[0] = hue;
+      this.channels[1] = sat;
+      this.channels[2] = val;
+      this.model = "HSV";
+    }
+    value() {
+      if (this.model === "HSV") {
+        this.toRGB();
+      }
+      return color(this.channels[0], this.channels[1], this.channels[2], this.channels[3]);
+    }
   }
-  SpatialHashGrid.prototype.key = function (x, y) {
-    return x + "," + y;
-  };
-  SpatialHashGrid.prototype.getCellIndex = function (x, y) {
-    var xIndex = floor(x / this.cellSize);
-    var yIndex = floor(y / this.cellSize);
-    return new Vector(xIndex, yIndex);
-  };
-  SpatialHashGrid.prototype.newClient = function (client) {
-    client.indices = [];
-    this.insert(client);
-    return client;
-  };
-  SpatialHashGrid.prototype.insert = function (client) {
-    var x = client.position.x + client.hitbox.aabb.center.x;
-    var y = client.position.y + client.hitbox.aabb.center.y;
-    var width = client.hitbox.aabb.width;
-    var height = client.hitbox.aabb.width;
 
-    // get the client's span
-    var index1 = this.getCellIndex(x - width / 2, y - height / 2);
-    var index2 = this.getCellIndex(x + width / 2, y + height / 2);
-    client.indices = [index1, index2];
+  let cellsChecked = 0;
 
-    // iterate over span, adding client to each cell
-    for (var x = index1.x; x <= index2.x; ++x) {
-      for (var y = index1.y; y <= index2.y; ++y) {
-        var key = this.key(x, y);
-        if (!this.grid[key]) {
-          this.grid[key] = [];
+  class SpatialHashGrid {
+    constructor(cellSize) {
+      this.grid = {};
+      this.cellSize = cellSize;
+    }
+    key = (x, y) => x + "," + y;
+    getCellIndex(x, y) {
+      const xIndex = floor(x / this.cellSize);
+      const yIndex = floor(y / this.cellSize);
+      return new Vector(xIndex, yIndex);
+    }
+    newClient(client) {
+      client.indices = [];
+      this.insert(client);
+      return client;
+    }
+    insert(client) {
+      const x = client.position.x + client.hitbox.aabb.center.x;
+      const y = client.position.y + client.hitbox.aabb.center.y;
+      const width = client.hitbox.aabb.width;
+      const height = client.hitbox.aabb.width;
+
+      // get the client's span
+      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
+      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
+      client.indices = [index1, index2];
+
+      // iterate over span, adding client to each cell
+      for (let x = index1.x; x <= index2.x; ++x) {
+        for (let y = index1.y; y <= index2.y; ++y) {
+          const key = this.key(x, y);
+          if (!this.grid[key]) {
+            this.grid[key] = [];
+          }
+          this.grid[key].push(client);
         }
-        this.grid[key].push(client);
       }
     }
-  };
-  SpatialHashGrid.prototype.findNear = function (position, width, height) {
-    var x = position.x;
-    var y = position.y;
+    findNear(position, width, height) {
+      const x = position.x;
+      const y = position.y;
 
-    // get span of checked area
-    var index1 = this.getCellIndex(x - width / 2, y - height / 2);
-    var index2 = this.getCellIndex(x + width / 2, y + height / 2);
+      // get span of checked area
+      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
+      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
 
-    // iterate over spanned area for clients
-    pushMatrix();
-    translate(300, 300);
-    fill(180, 30);
-    stroke(180, 90);
-    var clients = [];
-    for (var x = index1.x; x <= index2.x; ++x) {
-      for (var y = index1.y; y <= index2.y; ++y) {
-        var key = this.key(x, y);
-        if (this.grid[key]) {
-          for (var i = 0; i < this.grid[key].length; i++) {
-            clients.push(this.grid[key][i]);
+      // iterate over spanned area for clients
+      pushMatrix();
+      translate(canvasHalfWidth, canvasHalfHeight);
+      fill(180, 30);
+      stroke(180, 90);
+      let clients = [];
+      for (let x = index1.x; x <= index2.x; ++x) {
+        for (let y = index1.y; y <= index2.y; ++y) {
+          let key = this.key(x, y);
+          if (this.grid[key]) {
+            for (var i = 0; i < this.grid[key].length; i++) {
+              clients.push(this.grid[key][i]);
+            }
+          }
+          rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+          cellsChecked++;
+        }
+      }
+      popMatrix();
+      return clients;
+    }
+    remove(client) {
+      const index1 = client.indices[0];
+      const index2 = client.indices[1];
+      // iterate over client's span, removing it from each cell
+      const searchedId = client.id;
+      for (let x = index1.x; x <= index2.x; ++x) {
+        for (let y = index1.y; y <= index2.y; ++y) {
+          var key = this.key(x, y);
+          var cell = this.grid[key];
+          if (!cell) {
+            continue;
+          }
+
+          const clientIndex = cell.indexOf(client);
+          if (clientIndex !== -1) {
+            cell.splice(clientIndex, 1);
+          }
+
+          if (cell.length === 0) {
+            delete this.grid[key];
           }
         }
-        rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-        cellsChecked++;
       }
     }
-    popMatrix();
-    return clients;
-  };
-  SpatialHashGrid.prototype.remove = function (client) {
-    var index1 = client.indices[0];
-    var index2 = client.indices[1];
-    // iterate over client's span, removing it from each cell
-    var searchedId = client.id;
-    for (var x = index1.x; x <= index2.x; ++x) {
-      for (var y = index1.y; y <= index2.y; ++y) {
-        var key = this.key(x, y);
-        var cell = this.grid[key];
-        if (!cell) {
-          continue;
-        }
+    update(client) {
+      const x = client.position.x + client.hitbox.aabb.center.x;
+      const y = client.position.y + client.hitbox.aabb.center.y;
+      const width = client.hitbox.aabb.width;
+      const height = client.hitbox.aabb.width;
 
-        var clientIndex = cell.indexOf(client);
-        if (clientIndex !== -1) {
-          cell.splice(clientIndex, 1);
-        }
-
-        if (cell.length === 0) {
-          delete this.grid[key];
-        }
+      // get the client's span
+      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
+      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
+      // check for change in grid position
+      if (!index1.equalTo(client.indices[0]) || !index2.equalTo(client.indices[1])) {
+        this.remove(client);
+        this.insert(client);
       }
     }
-  };
-  SpatialHashGrid.prototype.update = function (client) {
-    var x = client.position.x + client.hitbox.aabb.center.x;
-    var y = client.position.y + client.hitbox.aabb.center.y;
-    var width = client.hitbox.aabb.width;
-    var height = client.hitbox.aabb.width;
-
-    // get the client's span
-    var index1 = this.getCellIndex(x - width / 2, y - height / 2);
-    var index2 = this.getCellIndex(x + width / 2, y + height / 2);
-    // check for change in grid position
-    if (!index1.equalTo(client.indices[0]) || !index2.equalTo(client.indices[1])) {
-      this.remove(client);
-      this.insert(client);
+    draw() {
+      stroke(new Color(0, 0, 0.8, "HSV").value());
+      pushMatrix();
+      translate(canvasHalfWidth, canvasHalfHeight);
+      for (let x = ceil(-width / this.cellSize) * this.cellSize; x <= canvasHalfWidth; x += this.cellSize) {
+        line(x, height, x, -height);
+      }
+      for (let y = ceil(-height / this.cellSize) * this.cellSize; y <= canvasHalfHeight; y += this.cellSize) {
+        line(width, y, -width, y);
+      }
+      popMatrix();
     }
-  };
-  SpatialHashGrid.prototype.draw = function () {
-    stroke(newColor(0, 0, 0.8, "HSV").value());
-    pushMatrix();
-    translate(300, 300);
-    for (var x = ceil(-width / this.cellSize) * this.cellSize; x <= width / 2; x += this.cellSize) {
-      line(x, height, x, -height);
-    }
-    for (var y = ceil(-height / this.cellSize) * this.cellSize; y <= height / 2; y += this.cellSize) {
-      line(width, y, -width, y);
-    }
-    popMatrix();
-  };
+  }
 
   var gridSize = 50;
   if (veryMoreBoxes) {
@@ -464,35 +430,37 @@ function program() {
   }
   var world = new SpatialHashGrid(gridSize);
 
-  var Shape = function (params) {
-    this.color = params.color;
-    this.type = params.type || "Polygon";
-    if (this.type === "Polygon") {
-      this.vertices = params.vertices;
-    } else if (this.type === "Circle") {
-      this.center = retDef(params.center, new Vector(0, 0));
-      this.radius = params.radius;
-    }
-  };
-  Shape.prototype.draw = function (dx, dy) {
-    fill(this.color.cachedValue);
-    if (this.type === "Polygon") {
-      beginShape();
-      for (var i = 0; i < this.vertices.length; i++) {
-        var vert = this.vertices[i];
-        // Vector check stuff
-        if (!(vert instanceof Vector)) {
-          vert = new Vector(vert[0], vert[1]);
-        }
-        vertex(vert.x + dx, vert.y + dy);
+  class Shape {
+    constructor(params) {
+      this.color = params.color;
+      this.type = params.type || "Polygon";
+      if (this.type === "Polygon") {
+        this.vertices = params.vertices;
+      } else if (this.type === "Circle") {
+        this.center = retDef(params.center, new Vector(0, 0));
+        this.radius = params.radius;
       }
-      endShape(CLOSE);
-    } else if (this.type === "Circle") {
-      ellipse(this.center.x, this.center.y, this.radius * 2, this.radius * 2);
     }
-    fill(125);
-    ellipse(0, 0, 5, 5);
-  };
+    draw(dx, dy) {
+      fill(this.color.cachedValue);
+      if (this.type === "Polygon") {
+        beginShape();
+        for (let i = 0; i < this.vertices.length; i++) {
+          let vert = this.vertices[i];
+          // Vector check stuff
+          if (!(vert instanceof Vector)) {
+            vert = new Vector(vert[0], vert[1]);
+          }
+          vertex(vert.x + dx, vert.y + dy);
+        }
+        endShape(CLOSE);
+      } else if (this.type === "Circle") {
+        ellipse(this.center.x, this.center.y, this.radius * 2, this.radius * 2);
+      }
+      fill(125);
+      ellipse(0, 0, 5, 5);
+    }
+  }
 
   var regularPolyVerts = function (x, y, r, n) {
     var vertices = [];
@@ -527,7 +495,6 @@ function program() {
   };
 
   // temp
-  var Hitbox;
   var focus;
   var Base = function (params) {
     this.id = newid();
@@ -536,7 +503,7 @@ function program() {
     this.position = retDef(params.position, new Vector(0, 0));
     this.dir = params.dir || 0;
     this.shape = params.shape || 0;
-    this.trueColor = newColor(random(-15, 30), 0.6, 1, "HSV");
+    this.trueColor = new Color(random(-15, 30), 0.6, 1, "HSV");
 
     this.hitbox = new Hitbox(params.shape, this);
     this.axesBuffer = [];
@@ -555,11 +522,11 @@ function program() {
     this.ticks++;
     this.position = this.position.add(this.velocity.multiply(dt));
     this.dir += this.omega * dt;
-    if (abs(this.position.x) > 330) {
-      this.position.x = (this.position.x / abs(this.position.x)) * -1 * 300;
+    if (abs(this.position.x) > canvasHalfWidth + 30) {
+      this.position.x = (this.position.x / abs(this.position.x)) * -1 * canvasHalfWidth;
     }
-    if (abs(this.position.y) > 330) {
-      this.position.y = (this.position.y / abs(this.position.y)) * -1 * 300;
+    if (abs(this.position.y) > canvasHalfHeight + 30) {
+      this.position.y = (this.position.y / abs(this.position.y)) * -1 * canvasHalfHeight;
     }
     if (this.ticks % (60 * dt) === 0 && randomMovement) {
       var scale = ABSURDITY ? 0.5 : 1;
@@ -567,14 +534,14 @@ function program() {
       this.omega = random(-0.1, 0.1) * scale;
     }
     if (focus === this.id) {
-      this.shape.color = newColor(110, 0.4, 1, "HSV");
+      this.shape.color = new Color(110, 0.4, 1, "HSV");
     } else {
       this.shape.color = this.trueColor;
     }
   };
   Base.prototype.draw = function () {
     pushMatrix();
-    translate(this.position.x + 300, this.position.y + height / 2);
+    translate(this.position.x + canvasHalfWidth, this.position.y + height / 2);
     if (this.shape.type !== "Circle") {
       rotate(this.dir);
     }
@@ -582,84 +549,86 @@ function program() {
     popMatrix();
   };
 
-  var Hitbox = function (shape, base) {
-    Shape.call(this, shape);
-    this.rotatedVertices = [];
-    this.transformedVertices = [];
-    this.normals = [];
-    this.cachedDir = null;
-    this.lastUpdate = "None";
+  class Hitbox extends Shape {
+    constructor(shape, base) {
+      super(shape);
+      this.rotatedVertices = [];
+      this.transformedVertices = [];
+      this.normals = [];
+      this.cachedDir = null;
+      this.lastUpdate = "None";
 
-    // cache everything
-    this.aabb = {};
-    // this.cachedAabb = {};
-    this.cachedNormals = [];
-    if (this.type === "Circle") {
-      this.aabb.width = this.radius * 2;
-      this.aabb.height = this.aabb.width;
-      this.aabb.center = this.center;
-      this.cachedCenter = this.center.multiply(1);
-    }
-    if (this.type === "Polygon") {
-      var cosT = cos(base.dir);
-      var sinT = sin(base.dir);
-      var minDX = Infinity;
-      var minDY = Infinity;
-      var maxDX = -Infinity;
-      var maxDY = -Infinity;
-      var sum = new Vector(0, 0);
-      for (var i = 0; i < this.vertices.length; i++) {
-        var vertex = this.vertices[i];
-        this.rotatedVertices[i] = new Vector(
-          vertex.x * cosT - vertex.y * sinT,
-          vertex.x * sinT + vertex.y * cosT
-        );
-        /*
+      // cache everything
+      this.aabb = {};
+      // this.cachedAabb = {};
+      this.cachedNormals = [];
+      if (this.type === "Circle") {
+        this.aabb.width = this.radius * 2;
+        this.aabb.height = this.aabb.width;
+        this.aabb.center = this.center;
+        this.cachedCenter = this.center.multiply(1);
+      }
+      if (this.type === "Polygon") {
+        var cosT = cos(base.dir);
+        var sinT = sin(base.dir);
+        var minDX = Infinity;
+        var minDY = Infinity;
+        var maxDX = -Infinity;
+        var maxDY = -Infinity;
+        var sum = new Vector(0, 0);
+        for (var i = 0; i < this.vertices.length; i++) {
+          var vertex = this.vertices[i];
+          this.rotatedVertices[i] = new Vector(
+            vertex.x * cosT - vertex.y * sinT,
+            vertex.x * sinT + vertex.y * cosT
+          );
+          /*
 			            minDX = min(vertex.x, minDX); 
 			            minDY = min(vertex.y, minDY);
 			            maxDX = max(vertex.x, maxDX); 
 			            maxDY = max(vertex.y, maxDY);
 			            */
-        sum = sum.add(vertex);
-      }
-      // Better for less "regular" shapes
-      /*
+          sum = sum.add(vertex);
+        }
+        // Better for less "regular" shapes
+        /*
 			        this.cachedAabb.width = maxDX - minDX;
 			        this.cachedAabb.height = maxDY - minDY;
 			        this.cachedAabb.center = new Vector(
 			            (maxDX + minDX) / 2, (maxDY + minDY) / 2
 			        );
 			        */
-      this.cachedCenter = sum.divide(this.vertices.length);
-      if (this.cachedCenter.sqMag() < epsilon) {
-        this.cachedCenter = new Vector(0, 0);
-      }
-      this.center = this.cachedCenter.multiply(1);
-
-      var maxSqRadius = -Infinity;
-      for (var i = 0; i < this.rotatedVertices.length; i++) {
-        // this isn't java
-        var vertex = this.rotatedVertices[i];
-        var nextVertex = this.rotatedVertices[(i + 1) % this.rotatedVertices.length];
-        var edge = nextVertex.subtract(vertex);
-        var normal = edge.perpendicular().normalize();
-
-        var direction = this.cachedCenter.subtract(normal);
-        maxSqRadius = max(vertex.subtract(this.center).sqMag(), maxSqRadius);
-        var dotProd = normal.x * direction.x + normal.y * direction.y;
-        if (dotProd < 0) {
-          normal = normal.multiply(-1);
+        this.cachedCenter = sum.divide(this.vertices.length);
+        if (this.cachedCenter.sqMag() < epsilon) {
+          this.cachedCenter = new Vector(0, 0);
         }
-        this.cachedNormals[i] = normal;
+        this.center = this.cachedCenter.multiply(1);
+
+        var maxSqRadius = -Infinity;
+        for (var i = 0; i < this.rotatedVertices.length; i++) {
+          // this isn't java
+          var vertex = this.rotatedVertices[i];
+          var nextVertex = this.rotatedVertices[(i + 1) % this.rotatedVertices.length];
+          var edge = nextVertex.subtract(vertex);
+          var normal = edge.perpendicular().normalize();
+
+          var direction = this.cachedCenter.subtract(normal);
+          maxSqRadius = max(vertex.subtract(this.center).sqMag(), maxSqRadius);
+          var dotProd = normal.x * direction.x + normal.y * direction.y;
+          if (dotProd < 0) {
+            normal = normal.multiply(-1);
+          }
+          this.cachedNormals[i] = normal;
+        }
+        this.radius = sqrt(maxSqRadius);
+        // Better for more uniform shapes (this scenario)
+        this.aabb.width = 2 * this.radius;
+        this.aabb.height = 2 * this.radius;
+        this.aabb.center = this.center;
       }
-      this.radius = sqrt(maxSqRadius);
-      // Better for more uniform shapes (this scenario)
-      this.aabb.width = 2 * this.radius;
-      this.aabb.height = 2 * this.radius;
-      this.aabb.center = this.center;
+      this.broadUpdate(base);
     }
-    this.broadUpdate(base);
-  };
+  }
   Hitbox.prototype.broadUpdate = function (base) {
     this.lastUpdate = "AABB";
 
@@ -689,13 +658,18 @@ function program() {
     fill(128, 50);
     stroke(128, 50);
     rect(
-      center.x + position.x + 300 - aabbWidth / 2,
-      center.y + position.y + 300 - aabbHeight / 2,
+      center.x + position.x + canvasHalfWidth - aabbWidth / 2,
+      center.y + position.y + canvasHalfHeight - aabbHeight / 2,
       aabbWidth,
       aabbHeight
     );
     fill(128, 50);
-    ellipse(center.x + position.x + 300, center.y + position.y + 300, radius * 2, radius * 2);
+    ellipse(
+      center.x + position.x + canvasHalfWidth,
+      center.y + position.y + canvasHalfHeight,
+      radius * 2,
+      radius * 2
+    );
   };
   Hitbox.prototype.narrowUpdate = function (base) {
     if (this.type === "Circle" || this.lastUpdate !== "AABB") {
@@ -840,7 +814,7 @@ function program() {
       // Visualize
       pushMatrix();
       fill(255, 255, 255);
-      translate(300, 300);
+      translate(canvasHalfWidth, canvasHalfHeight);
       ellipse(center.x, center.y, 5, 5);
       ellipse(closestPoint.x, closestPoint.y, 5, 5);
       line(center.x, center.y, closestPoint.x, closestPoint.y);
@@ -867,7 +841,7 @@ function program() {
           var seperator = axis.normalize();
           var shadow = seperator.perpendicular().multiply(new Vector(400, 400));
           pushMatrix();
-          translate(300, 300);
+          translate(canvasHalfWidth, canvasHalfHeight);
           stroke(150, 150, 150);
           line(-seperator.x * 400, -seperator.y * 400, seperator.x * 400, seperator.y * 400);
           var mid;
@@ -952,29 +926,29 @@ function program() {
     var boxA = new Base({
       position: new Vector(-100, 0),
       dir: 0,
-      shape: newPolygon(regularPolyVerts(0, 0, 35, 5), newColor(255, 0, 0))
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
     });
     var boxB = new Base({
       position: new Vector(100, 0),
       dir: 0,
-      shape: newCircle(new Vector(0, 0), 25, newColor(255, 0, 0))
+      shape: newCircle(new Vector(0, 0), 25, new Color(255, 0, 0))
     });
   }
   if (moreBoxes && !veryMoreBoxes) {
     var boxC = new Base({
       position: new Vector(0, -100),
       dir: PI / 2,
-      shape: newPolygon(polyVerts([-25, -25, 25, -25, 25, 25, -25, 25, -50, 0]), newColor(255, 0, 0))
+      shape: newPolygon(polyVerts([-25, -25, 25, -25, 25, 25, -25, 25, -50, 0]), new Color(255, 0, 0))
     });
     var boxD = new Base({
       position: new Vector(0, 0),
       dir: 0,
-      shape: newPolygon(regularPolyVerts(0, 0, 35, 3), newColor(255, 0, 0))
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 3), new Color(255, 0, 0))
     });
     var boxE = new Base({
       position: new Vector(0, 100),
       dir: 0,
-      shape: newPolygon(regularPolyVerts(0, 0, 35, 4), newColor(255, 0, 0))
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
     });
   }
 
@@ -984,11 +958,14 @@ function program() {
   for (var i = 0; i < boxCount; i++) {
     var shap =
       ceil(random(0, 5)) > 2
-        ? newPolygon(regularPolyVerts(0, 0, ceil(random(s, s + 5)), ceil(random(2, 5))), newColor(255, 0, 0))
-        : newCircle(new Vector(0, 0), ceil(random(s, s + 5)), newColor(255, 0, 0));
+        ? newPolygon(regularPolyVerts(0, 0, ceil(random(s, s + 5)), ceil(random(2, 5))), new Color(255, 0, 0))
+        : newCircle(new Vector(0, 0), ceil(random(s, s + 5)), new Color(255, 0, 0));
     boxes.push(
       new Base({
-        position: new Vector(random(-280, 280), random(-280, 280)),
+        position: new Vector(
+          random(-canvasHalfWidth, canvasHalfWidth),
+          random(-canvasHalfHeight, canvasHalfHeight)
+        ),
         dir: 0,
         shape: shap
       })
@@ -1079,7 +1056,7 @@ function program() {
     client.getInput();
     world.newClient(client, client.position.add(aabb.center), new Vector(aabb.width, aabb.height));
   }
-  var collisionSet = new CustomSet();
+  var collisionSet = new Set();
   var draw = function () {
     Perf.resetMetrics();
 
@@ -1088,8 +1065,8 @@ function program() {
     Perf.getTime();
     collisions = [];
     ticksSinceInput++;
-    background(newColor(255, 255, 255).value());
-    fill(newColor(255, 0, 0).value());
+    background(new Color(255, 255, 255).value());
+    fill(new Color(255, 0, 0).value());
     world.draw();
 
     if (keys[32] & (ticksSinceInput >= 30)) {
@@ -1117,18 +1094,18 @@ function program() {
       var clients = world.findNear(box.position.add(aabb.center), aabb.width, aabb.height);
       Perf.updateMetric("hashGridQuery");
 
-      var seenIDs = new CustomSet();
+      var seenIDs = new Set();
       seenIDs.add(box.id);
       for (var j = 0; j < clients.length; j++) {
         // skip duplicate clients (from double overlaps)
-        if (seenIDs.contains(clients[j].id)) {
+        if (seenIDs.has(clients[j].id)) {
           continue;
         }
         var client = clients[j];
         seenIDs.add(client.id);
         // skip duplicate collision checks
         var formattedCollision = box.id < client.id ? box.id + "," + client.id : client.id + "," + box.id;
-        if (collisionSet.contains(formattedCollision)) {
+        if (collisionSet.has(formattedCollision)) {
           continue;
         }
         collisionSet.add(formattedCollision);
@@ -1177,7 +1154,12 @@ function program() {
       strokeWeight(1);
       box.draw();
       fill(211, 175, 55);
-      ellipse(box.position.x + box.hitbox.center.x + 300, box.position.y + box.hitbox.center.y + 300, 5, 5);
+      ellipse(
+        box.position.x + box.hitbox.center.x + canvasHalfWidth,
+        box.position.y + box.hitbox.center.y + canvasHalfHeight,
+        5,
+        5
+      );
     }
 
     Perf.getTotal();
