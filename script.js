@@ -9,7 +9,7 @@ function program() {
   const veryMoreBoxes = true; // a lot of boxes
   const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
 
-  const gridSize = considerablyLargeAmountOfBoxesToInsert ? 30 : 50;
+  const gridSize = 50;
   const FPS = considerablyLargeAmountOfBoxesToInsert ? 30 : 60;
   const visualize = false; // recommended to swap off when boxes are densely packed
   const displayAABB = false;
@@ -123,35 +123,55 @@ function program() {
       if (init === "dirMag") [x, y] = [input2 * Math.cos(input1), input2 * Math.sin(input1)];
       [this.x, this.y] = [x, y];
     }
+    copy = () => new Vector(this.x, this.y);
     sqMag = () => sq(this.x) + sq(this.y);
     mag = () => sqrt(this.sqMag());
     theta = () => Math.atan2(this.y, this.x);
     add(vector) {
-      if (!(vector instanceof Vector)) vector = new Vector(vector, vector);
-      return new Vector(this.x + vector.x, this.y + vector.y);
+      let vectorX, vectorY;
+      if (typeof vector === "number") vectorX = vectorY = vector;
+      else [vectorX, vectorY] = [vector.x, vector.y];
+      this.x += vectorX;
+      this.y += vectorY;
+      return this;
     }
     subtract(vector) {
-      if (!(vector instanceof Vector)) vector = new Vector(vector, vector);
-      return new Vector(this.x - vector.x, this.y - vector.y);
+      let vectorX, vectorY;
+      if (typeof vector === "number") vectorX = vectorY = vector;
+      else [vectorX, vectorY] = [vector.x, vector.y];
+      this.x -= vectorX;
+      this.y -= vectorY;
+      return this;
     }
     multiply(vector) {
-      if (!(vector instanceof Vector)) vector = new Vector(vector, vector);
-      return new Vector(this.x * vector.x, this.y * vector.y);
+      let vectorX, vectorY;
+      if (typeof vector === "number") vectorX = vectorY = vector;
+      else [vectorX, vectorY] = [vector.x, vector.y];
+      this.x *= vectorX;
+      this.y *= vectorY;
+      return this;
     }
     divide(vector) {
-      if (!(vector instanceof Vector)) vector = new Vector(vector, vector);
-      return new Vector(this.x / vector.x, this.y / vector.y);
+      let vectorX, vectorY;
+      if (typeof vector === "number") vectorX = vectorY = vector;
+      else [vectorX, vectorY] = [vector.x, vector.y];
+      this.x /= vectorX;
+      this.y /= vectorY;
+      return this;
     }
     normalize() {
       const mag = this.mag();
       if (mag === 0) return this;
-      return this.divide(new Vector(mag, mag));
+      return this.divide(mag);
     }
     dotProduct(vector) {
       if (!(vector instanceof Vector)) vector = new Vector(vector, vector);
       return this.x * vector.x + this.y * vector.y;
     }
-    perpendicular = () => new Vector(-this.y, this.x);
+    perpendicular() {
+      [this.x, this.y] = [-this.y, this.x];
+      return this;
+    }
     display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
     equalTo = (vector) => this.x === vector.x && this.y === vector.y;
   }
@@ -221,8 +241,9 @@ function program() {
 
   class SpatialHashGrid {
     constructor(cellSize) {
-      this.grid = {};
+      this.grid = new Map();
       this.cellSize = cellSize;
+      this.queryIds = 0;
     }
     key = (x, y) => x + "," + y;
     getCellIndex(x, y) {
@@ -233,6 +254,7 @@ function program() {
     newClient(client) {
       client.indices = [];
       this.insert(client);
+      this.queryId = -1;
       return client;
     }
     insert(client) {
@@ -250,8 +272,8 @@ function program() {
       for (let x = index1.x; x <= index2.x; ++x) {
         for (let y = index1.y; y <= index2.y; ++y) {
           const key = this.key(x, y);
-          if (!this.grid[key]) this.grid[key] = [];
-          this.grid[key].push(client);
+          if (!this.grid.has(key)) this.grid.set(key, new Set());
+          this.grid.get(key).add(client);
         }
       }
     }
@@ -270,11 +292,19 @@ function program() {
         fill(180, 30);
         stroke(180, 90);
       }
-      let clients = new Set();
+      let clients = [];
+      const queryId = this.queryIds++;
       for (let x = index1.x; x <= index2.x; ++x) {
         for (let y = index1.y; y <= index2.y; ++y) {
           let key = this.key(x, y);
-          if (this.grid[key]) for (const client of this.grid[key]) clients.add(client);
+          if (this.grid.has(key)) {
+            for (const client of this.grid.get(key)) {
+              if (client.queryId !== queryId) {
+                client.queryId = queryId;
+                clients.push(client);
+              }
+            }
+          }
           if (displayGridCheck) rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
           cellsChecked++;
         }
@@ -289,17 +319,9 @@ function program() {
       for (let x = index1.x; x <= index2.x; ++x) {
         for (let y = index1.y; y <= index2.y; ++y) {
           const key = this.key(x, y);
-          const cell = this.grid[key];
-          if (!cell) continue;
-
-          const clientIndex = cell.indexOf(client);
-          if (clientIndex !== -1) {
-            cell.splice(clientIndex, 1);
-          }
-
-          if (cell.length === 0) {
-            delete this.grid[key];
-          }
+          const cell = this.grid.get(key);
+          cell.delete(client);
+          if (cell.size === 0) this.grid.delete(key);
         }
       }
     }
@@ -398,7 +420,7 @@ function program() {
         this.aabb.width = this.radius * 2;
         this.aabb.height = this.aabb.width;
         this.aabb.center = this.center;
-        this.cachedCenter = this.center.multiply(1); // creates copy
+        this.cachedCenter = this.center.copy(); // creates copy
       }
       if (this.type === "Polygon") {
         const cosT = Math.cos(base.dir);
@@ -410,26 +432,25 @@ function program() {
             vertex.x * cosT - vertex.y * sinT,
             vertex.x * sinT + vertex.y * cosT
           );
-          sum = sum.add(vertex);
+          sum.add(vertex);
         }
-        this.cachedCenter = sum.divide(this.vertices.length);
-        if (this.cachedCenter.sqMag() < epsilon) {
-          this.cachedCenter = new Vector(0, 0);
-        }
-        this.center = this.cachedCenter.multiply(1);
+        this.cachedCenter = sum.copy().divide(this.vertices.length);
+        if (this.cachedCenter.sqMag() < epsilon) [this.cachedCenter.x, this.cachedCenter.y] = [0, 0];
+        this.center = this.cachedCenter.copy();
 
         let maxSqRadius = -Infinity;
         for (let i = 0; i < this.rotatedVertices.length; i++) {
           const vertex = this.rotatedVertices[i];
           const nextVertex = this.rotatedVertices[(i + 1) % this.rotatedVertices.length];
-          const edge = nextVertex.subtract(vertex);
-          let normal = edge.perpendicular().normalize();
+          const edge = nextVertex.copy().subtract(vertex);
+          let normal = edge.copy().perpendicular().normalize();
 
-          const direction = this.cachedCenter.subtract(normal);
-          maxSqRadius = max(vertex.subtract(this.center).sqMag(), maxSqRadius);
+          const direction = this.cachedCenter.copy().subtract(normal);
+          maxSqRadius = max(vertex.copy().subtract(this.center).sqMag(), maxSqRadius);
           const dotProd = normal.x * direction.x + normal.y * direction.y;
-          if (dotProd < 0) normal = normal.multiply(-1);
+          if (dotProd < 0) normal.multiply(-1);
           this.cachedNormals[i] = normal;
+          this.normals[i] = this.cachedNormals[i].copy();
         }
         this.radius = sqrt(maxSqRadius);
         // Better for more uniform shapes (this scenario)
@@ -489,22 +510,21 @@ function program() {
       // recalc transformed vertices and normals
       for (let i = 0; i < this.vertices.length; i++) {
         const vertex = this.vertices[i];
-        this.rotatedVertices[i] = new Vector(
-          vertex.x * cosT - vertex.y * sinT,
-          vertex.x * sinT + vertex.y * cosT
-        );
-        this.transformedVertices[i] = this.rotatedVertices[i].add(position);
+        const rotatedVertex = this.rotatedVertices[i];
 
-        this.normals[i] = new Vector(
-          this.cachedNormals[i].x * cosT - this.cachedNormals[i].y * sinT,
-          this.cachedNormals[i].x * sinT + this.cachedNormals[i].y * cosT
-        );
+        rotatedVertex.x = vertex.x * cosT - vertex.y * sinT;
+        rotatedVertex.y = vertex.x * sinT + vertex.y * cosT;
+
+        this.transformedVertices[i] = rotatedVertex.copy().add(position);
+
+        this.normals[i].x = this.cachedNormals[i].x * cosT - this.cachedNormals[i].y * sinT;
+        this.normals[i].y = this.cachedNormals[i].x * sinT + this.cachedNormals[i].y * cosT;
       }
     }
     project(axis, base, out) {
       let min, max;
       if (this.type === "Circle") {
-        const center = this.center.add(base.position);
+        const center = this.center.copy().add(base.position);
         const projection = axis.x * center.x + axis.y * center.y;
         const radiusProjection = this.radius * axis.mag();
         min = projection - radiusProjection;
@@ -522,7 +542,7 @@ function program() {
     closestPointToCenterOf = function (base) {
       let closestPoint;
       let minDistanceSquared = Infinity;
-      const center = base.position.add(base.hitbox.center);
+      const center = base.position.copy().add(base.hitbox.center);
       // loop over this object's edges
       const vertices = this.transformedVertices;
       for (let i = 0; i < vertices.length; i++) {
@@ -530,13 +550,13 @@ function program() {
         const vertexB = vertices[(i + 1) % vertices.length];
 
         // get closest point on side
-        const sideAB = vertexB.subtract(vertexA);
-        const sideACenter = center.subtract(vertexA);
+        const sideAB = vertexB.copy().subtract(vertexA);
+        const sideACenter = center.copy().subtract(vertexA);
         let projection = (sideACenter.x * sideAB.x + sideACenter.y * sideAB.y) / sideAB.sqMag();
 
         projection = constrain(projection, 0, 1);
-        const point = vertexA.add(sideAB.multiply(new Vector(projection, projection)));
-        const difference = point.subtract(center);
+        const point = vertexA.copy().add(sideAB.copy().multiply(projection));
+        const difference = point.copy().subtract(center);
         const distanceSquared = difference.sqMag();
         if (distanceSquared < minDistanceSquared) {
           minDistanceSquared = distanceSquared;
@@ -568,12 +588,12 @@ function program() {
       const input_x = (keys[RIGHT] || keys[68]) - (keys[LEFT] || keys[65]);
       const input_y = (keys[DOWN] || keys[83]) - (keys[UP] || keys[87]);
       const input_dir = keys[69] - keys[81];
-      this.position = this.position.add(new Vector(input_x, input_y).normalize());
+      this.position.add(new Vector(input_x, input_y).normalize());
       this.dir += input_dir / 20;
     }
     update() {
       this.ticks++;
-      this.position = this.position.add(this.velocity.multiply(dt));
+      this.position.add(this.velocity.copy().multiply(dt));
       this.dir += this.omega * dt;
       if (abs(this.position.x) > canvasHalfWidth + 30) {
         this.position.x = (this.position.x / abs(this.position.x)) * -1 * canvasHalfWidth;
@@ -599,15 +619,15 @@ function program() {
       this.shape.draw(0, 0);
       popMatrix();
     }
-    checkCollision(otherBase, visualize) {
+    checkCollision(otherBase) {
       const baseA = this;
       const baseB = otherBase;
-      const tCenterA = baseA.hitbox.center.add(baseA.position);
-      const tCenterB = baseB.hitbox.center.add(baseB.position);
+      const tCenterA = baseA.hitbox.center.copy().add(baseA.position);
+      const tCenterB = baseB.hitbox.center.copy().add(baseB.position);
 
       this.axesBuffer.length = 0;
       // common seperation axis first
-      this.axesBuffer.push(tCenterB.subtract(tCenterA).normalize());
+      this.axesBuffer.push(tCenterB.copy().subtract(tCenterA).normalize());
       for (const normal of baseA.hitbox.normals) this.axesBuffer.push(normal);
       for (const normal of baseB.hitbox.normals) this.axesBuffer.push(normal);
 
@@ -615,20 +635,21 @@ function program() {
       // Circle-Circle test
       if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
         const sqDistance = baseA.hitbox.center
+          .copy()
           .add(baseA.position)
-          .subtract(baseB.hitbox.center.add(baseB.position))
+          .subtract(baseB.hitbox.center.copy().add(baseB.position))
           .sqMag();
         const radiiSum = baseA.hitbox.radius + baseB.hitbox.radius;
         if (sqDistance > sq(radiiSum)) {
           return { colliding: false };
         } else {
           const overlap = sqrt(sqDistance) - radiiSum;
-          const normal = tCenterA.subtract(tCenterB).normalize();
+          const normal = tCenterA.copy().subtract(tCenterB).normalize();
           return {
             colliding: true,
             axis: normal,
             overlap: overlap,
-            MTV: normal.multiply(overlap),
+            MTV: normal.copy().multiply(overlap),
             baseA: baseA,
             baseB: baseB
           };
@@ -660,17 +681,12 @@ function program() {
       if (baseA.hitbox.type !== baseB.hitbox.type) {
         // get closest point on edge and add to normals
         let circleBase, otherBase;
-        if (baseA.hitbox.type === "Circle") {
-          circleBase = baseA;
-          otherBase = baseB;
-        } else {
-          circleBase = baseB;
-          otherBase = baseA;
-        }
-        const center = circleBase.position.add(circleBase.hitbox.center);
+        if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB];
+        else [circleBase, otherBase] = [baseB, baseA];
+        const center = circleBase.position.copy().add(circleBase.hitbox.center);
 
         const closestPoint = otherBase.hitbox.closestPointToCenterOf(circleBase);
-        const axis = closestPoint.subtract(center);
+        const axis = closestPoint.copy().subtract(center);
 
         // project each hitbox's vertices
         const projA = { min: null, max: null };
@@ -689,15 +705,15 @@ function program() {
       }
 
       // reorient axis when neccessary
-      const direction = tCenterB.subtract(tCenterA);
+      const direction = tCenterB.copy().subtract(tCenterA);
       const dotProd = minNormal.x * direction.x + minNormal.y * direction.y;
-      if (dotProd < 0) minNormal = minNormal.multiply(-1);
+      if (dotProd < 0) minNormal.multiply(-1);
 
       return {
         colliding: true,
         axis: minNormal,
         overlap: minOverlap,
-        MTV: minNormal.multiply(minOverlap),
+        MTV: minNormal.copy().multiply(minOverlap),
         baseA: baseA,
         baseB: baseB
       };
@@ -706,9 +722,9 @@ function program() {
       if (!data.colliding) return;
       const baseA = this;
       const baseB = data.baseB;
-      const displacement = data.MTV.multiply(0.5 + epsilon);
-      baseA.position = baseA.position.subtract(displacement);
-      baseB.position = baseB.position.add(displacement);
+      const displacement = data.MTV.copy().multiply(0.5 + epsilon);
+      baseA.position = baseA.position.copy().subtract(displacement);
+      baseB.position.add(displacement);
     }
   }
 
@@ -847,12 +863,11 @@ function program() {
   for (const client of boxes) {
     const aabb = client.hitbox.aabb;
     client.getInput();
-    world.newClient(client, client.position.add(aabb.center), new Vector(aabb.width, aabb.height));
+    world.newClient(client, client.position.copy().add(aabb.center), new Vector(aabb.width, aabb.height));
   }
 
   const collisionSet = new Set();
   function draw() {
-    const canvas = document.getElementById("__processing0").getContext("2d");
     lastFrame = millis();
     Perf.resetMetrics();
     collisionSet.clear();
@@ -883,13 +898,12 @@ function program() {
     for (const box of boxes) {
       const aabb = box.hitbox.aabb;
       Perf.getTime();
-      const clients = world.findNear(box.position.add(aabb.center), aabb.width, aabb.height);
+      const clients = world.findNear(box.position.copy().add(aabb.center), aabb.width, aabb.height);
       Perf.updateMetric("hashGridQuery");
 
       for (const client of clients) {
         // skip duplicate collision check with self
         if (client.id === box.id) continue;
-
         // skip duplicate collision checks
         const formattedCollision = box.id < client.id ? box.id + "," + client.id : client.id + "," + box.id;
         if (collisionSet.has(formattedCollision)) continue;
@@ -897,8 +911,9 @@ function program() {
         collisionSet.add(formattedCollision);
         // quick radii check
         const sqDistance = box.hitbox.center
+          .copy()
           .add(box.position)
-          .subtract(client.hitbox.center.add(client.position))
+          .subtract(client.hitbox.center.copy().add(client.position))
           .sqMag();
         const radiiSum = box.hitbox.radius + client.hitbox.radius;
         if (sqDistance > sq(radiiSum)) continue;
@@ -957,7 +972,7 @@ function program() {
 
     const countMetrics = [
       "Cells Filled",
-      Object.keys(world.grid).length,
+      world.grid.size,
       "Cells Checked",
       cellsChecked,
       "SAT Calls",
