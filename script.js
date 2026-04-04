@@ -1,25 +1,30 @@
 function program() {
-  let ctx;
   title("Mass Object Collision Handler");
   size(1800, 1200);
   const canvasHalfWidth = width / 2;
   const canvasHalfHeight = height / 2;
-  // no more radian jumpscare
 
+  // Simulation Options
+  const initialVelocity = true; // objects begin with an intial velocity
+  const periodicVelocityShifts = false; // velocity randomized periodically
+  const collisionImpulse = true; // objects bounce off each other on collision
+  const restitution = 1; // collision bounciness (0 - 1)
+  const allCircles = false; // all shapes are circles. Increases performance as well
+  const allPolys = false; // all shapes are polygons. Slightly more performance intensive
+  const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
+
+  // Box Count
   const moreBoxes = true; // replaces the usual two boxes with 5
   const veryMoreBoxes = true; // a lot of boxes
-  const considerablyLargeAmountOfBoxesToInsert = false; // way too many boxes
+  const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
 
-  const gridSize = 50;
+  // Visuals
+  // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
   const FPS = considerablyLargeAmountOfBoxesToInsert ? 30 : 60;
-  const visualize = false; // recommended to swap off when boxes are densely packed
-  const displayAABB = false;
-  const displayGridCheck = false;
-  const allCircles = false;
-  const allPolys = false;
-  const drawAsCircles = false;
-  const sameColor = false;
-  const randomMovement = true; // they're alive! (and ruining your performance
+  const drawAsCircles = false; // shapes drawn as circles. Increases performance
+  const displayAABB = false; // aabbs drawn. Uses rect() so not very good for performance
+  const displayGridCheck = false; // checked grids are highlighted. Very performance intensive
+  const sameColor = false; // shapes drawn with the same color. Minor performance gain
 
   /**
 	  *VISUALIZER FLASHING WARNING WHEN OBJECTS COLLIDE AT CORNERS*
@@ -583,7 +588,7 @@ function program() {
       this.hitbox = new Hitbox(params.shape, this);
       this.axesBuffer = [];
       const scale = considerablyLargeAmountOfBoxesToInsert ? 0.5 : 1;
-      if (randomMovement) this.velocity = new Vector(random(0, 2 * PI), random(2, 5) * scale, "dirMag");
+      if (initialVelocity) this.velocity = new Vector(random(0, 2 * PI), random(2, 10) * scale, "dirMag");
       else this.velocity = new Vector(0, 0);
       this.omega = 0;
       this.ticks = floor(random(0, 50));
@@ -599,14 +604,15 @@ function program() {
       this.ticks++;
       this.position.add(this.velocity.copy().multiply(dt));
       this.dir += this.omega * dt;
-      if (abs(this.position.x) > canvasHalfWidth + 30) {
-        this.position.x = (this.position.x / abs(this.position.x)) * -1 * canvasHalfWidth;
+      if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
+        this.position.x = -Math.sign(this.position.x) * (canvasHalfWidth + this.hitbox.aabb.width / 2);
       }
-      if (abs(this.position.y) > canvasHalfHeight + 30) {
-        this.position.y = (this.position.y / abs(this.position.y)) * -1 * canvasHalfHeight;
+      if (abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
+        this.position.y = -Math.sign(this.position.y) * (canvasHalfHeight + this.hitbox.aabb.width / 2);
       }
-      if (this.ticks % (60 * dt) === 0 && randomMovement) {
+      if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
         const scale = considerablyLargeAmountOfBoxesToInsert ? 0.5 : 1;
+        this.velocity = new Vector(random(0, 2 * PI), random(2, 5) * scale, "dirMag");
         this.omega = random(-0.1, 0.1) * scale;
       }
       if (focus === this.id) {
@@ -731,8 +737,9 @@ function program() {
       baseA.position = baseA.position.copy().subtract(displacement);
       baseB.position.add(displacement);
 
+      if (!collisionImpulse) return;
+
       if (axis.mag() > 1.1) println("Non normalized axis");
-      const res = 0.75;
       const tangent = axis.copy().perpendicular();
       // get components of each object's velocity (scalar quantities)
       // only velocity parallel to collision axis affected by collision
@@ -743,12 +750,12 @@ function program() {
 
       baseA.velocity = axis
         .copy()
-        .multiply(pVelocityA + pVelocityB - res * (pVelocityA - pVelocityB))
+        .multiply(pVelocityA + pVelocityB - restitution * (pVelocityA - pVelocityB))
         .divide(2)
         .add(tangent.copy().multiply(tVelocityA));
       baseB.velocity = axis
         .copy()
-        .multiply(pVelocityA + pVelocityB + res * (pVelocityA - pVelocityB))
+        .multiply(pVelocityA + pVelocityB + restitution * (pVelocityA - pVelocityB))
         .divide(2)
         .add(tangent.copy().multiply(tVelocityB));
     }
@@ -768,7 +775,7 @@ function program() {
           random(-canvasHalfWidth, canvasHalfWidth),
           random(-canvasHalfHeight, canvasHalfHeight)
         ),
-        dir: 0,
+        dir: random(0, 2 * PI),
         shape: shape
       })
     );
@@ -894,9 +901,6 @@ function program() {
 
   const collisionSet = new Set();
   function draw() {
-    const canvas = document.getElementById("__processing0");
-    ctx = canvas.getContext("2d");
-
     lastFrame = millis();
     Perf.resetMetrics();
     collisionSet.clear();
@@ -954,7 +958,7 @@ function program() {
         client.hitbox.narrowUpdate(client);
         Perf.updateMetric("narrowUpdate");
 
-        const collision = box.checkCollision(client, visualize && (box.id === focus || client.id === focus));
+        const collision = box.checkCollision(client);
         Perf.updateMetric("satCheck");
         collisionChecks++;
         if (collision.colliding) collisions.push(collision);
