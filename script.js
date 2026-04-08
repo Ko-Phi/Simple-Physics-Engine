@@ -7,21 +7,26 @@ function program() {
   // Simulation Options
   const initialVelocity = true; // objects begin with an intial velocity
   const periodicVelocityShifts = false; // velocity randomized periodically
+  const velocityMagnitude = 5; // alters the magnitude of said velocity
+
   const collisionImpulse = true; // objects bounce off each other on collision
-  const restitution = 0.9; // collision bounciness (0 - 1)
+  const restitution = 0.75; // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
   const mu = 0.01; // add friction (should be quite small)
+
   const allCircles = false; // all shapes are circles. Increases performance as well
   const allPolys = false; // all shapes are polygons. Slightly more performance intensive
   const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
 
   // Box Count
-  const moreBoxes = true; // replaces the usual two boxes with 5
-  const veryMoreBoxes = true; // a lot of boxes
-  const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
+  const insertCount = 1000;
+  const scale = 12;
+  // const moreBoxes = true; // replaces the usual two boxes with 5
+  // const veryMoreBoxes = true; // a lot of boxes
+  // const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
 
   // Visuals
   // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
-  const FPS = considerablyLargeAmountOfBoxesToInsert ? 30 : 60;
+  const FPS = insertCount >= 750 ? 30 : 60;
   const drawAsCircles = false; // shapes drawn as circles. Increases performance
   const displayAABB = false; // aabbs drawn. Uses rect() so not very good for performance
   const displayGridCheck = false; // checked grids are highlighted. Very performance intensive
@@ -591,8 +596,8 @@ function program() {
 
       this.hitbox = new Hitbox(params.shape, this);
       this.axesBuffer = [];
-      const scale = considerablyLargeAmountOfBoxesToInsert ? 0.5 : 1;
-      if (initialVelocity) this.velocity = new Vector(random(0, 2 * PI), random(2, 10) * scale, "dirMag");
+      if (initialVelocity)
+        this.velocity = new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag");
       else this.velocity = new Vector(0, 0);
       this.omega = 0;
       this.ticks = floor(random(0, 50));
@@ -621,9 +626,8 @@ function program() {
       }
 
       if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
-        const scale = considerablyLargeAmountOfBoxesToInsert ? 0.5 : 1;
-        this.velocity = new Vector(random(0, 2 * PI), random(2, 5) * scale, "dirMag");
-        this.omega = random(-0.1, 0.1) * scale;
+        this.velocity = new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag");
+        this.omega = random(-0.01, 0.01) * scale;
       }
 
       if (focus === this.id) this.shape.color = new Color(110, 0.4, 1, "HSV");
@@ -770,16 +774,16 @@ function program() {
   }
 
   let boxes = [];
-  const insertCount = considerablyLargeAmountOfBoxesToInsert ? 1000 : veryMoreBoxes ? 200 : 0;
-  const scale = considerablyLargeAmountOfBoxesToInsert ? 8 : 20;
+  // const insertCount = considerablyLargeAmountOfBoxesToInsert ? 1000 : veryMoreBoxes ? 200 : 0;
+  // const scale = considerablyLargeAmountOfBoxesToInsert ? 8 : 20;
   for (let i = 0; i < insertCount; i++) {
     const shape =
       (ceil(random(0, 5)) > 2 && !allCircles) || allPolys
         ? newPolygon(
-            regularPolyVerts(0, 0, ceil(random(scale, scale + 3)), ceil(random(2, 5))),
+            regularPolyVerts(0, 0, ceil(scale * random(0.9, 1.1)), ceil(random(2, 5))),
             new Color(255, 0, 0)
           )
-        : newCircle(new Vector(0, 0), ceil(random(scale, scale + 5)), new Color(255, 0, 0));
+        : newCircle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color(255, 0, 0));
     boxes.push(
       new Base({
         position: new Vector(
@@ -792,6 +796,7 @@ function program() {
     );
   }
 
+  /*
   if (!veryMoreBoxes && !considerablyLargeAmountOfBoxesToInsert) {
     boxes.push(
       new Base({
@@ -825,6 +830,7 @@ function program() {
       );
     }
   }
+  */
 
   const displayPeriod = 60;
   class Performance {
@@ -928,7 +934,8 @@ function program() {
 
     if (keys[32] & (ticksSinceInput >= 30)) {
       focus = (focus + 1) % boxes.length;
-      for (const box of boxes) box.velocity.add(new Vector(random(0, 2 * PI), random(5, 15), "dirMag"));
+      for (const box of boxes)
+        box.velocity.add(new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag"));
       ticksSinceInput = 0;
     }
     for (const box of boxes) {
@@ -1045,9 +1052,9 @@ function program() {
     const keyWidth = 210;
     const columnGap = 16;
 
-    const rowHeight = textAscent() + textDescent();
+    const rowHeight = textAscent() * 2;
     const initialRowGap = 16;
-    const rowGap = 12;
+    const rowGap = 0;
     const start = margin + padding;
 
     const metricDisplayWidth = padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding;
@@ -1083,12 +1090,7 @@ function program() {
 
     fill(255, 255, 255);
     noStroke();
-    rect(
-      start,
-      start + rowHeight + initialRowGap / 1.5,
-      dataToDisplay.length * (dataWidth + columnGap) + keyWidth,
-      3
-    );
+    rect(start, start + rowHeight, dataToDisplay.length * (dataWidth + columnGap) + keyWidth, 3);
 
     textFont(font, 24);
     dx = start + keyWidth + columnGap;
@@ -1101,7 +1103,7 @@ function program() {
 
       if (i % 2 === 0) {
         fill(0, 0, 0, 50);
-        rect(margin, dy, metricDisplayWidth, rowHeight + rowGap);
+        rect(margin, dy, metricDisplayWidth, rowHeight);
         fill(255);
       }
 
@@ -1141,7 +1143,7 @@ function program() {
     for (let i = 0; i < countMetrics.length; i += 2) {
       if (i % 4 === 0) {
         fill(0, 0, 0, 50);
-        rect(margin, dy, counterDisplayWidth, rowHeight + rowGap);
+        rect(margin, dy, counterDisplayWidth, rowHeight);
         fill(255);
       }
       text(countMetrics[i] + ":", start, dy);
