@@ -119,9 +119,7 @@ function program() {
   // quite small
   const epsilon = 1e-6;
   const rounD = (num, deciPlace) => round(num * pow(10, deciPlace)) / pow(10, deciPlace);
-
-  // returns first defined value
-  const retDef = (input1, input2) => (input1 !== undefined ? input1 : input2);
+  const ehhItsCloseEnoughMan = (numA, numB) => abs(numA - numB) < epsilon;
 
   function getItem(array, index) {
     if (index >= array.length) return array[index % array.length];
@@ -422,7 +420,7 @@ function program() {
       this.type = params.type || "Polygon";
       if (this.type === "Polygon") this.vertices = params.vertices;
       else if (this.type === "Circle") {
-        this.center = retDef(params.center, new Vector(0, 0));
+        this.center = params.center ?? new Vector(0, 0);
         this.radius = params.radius;
       }
       this.rho = 1;
@@ -453,7 +451,7 @@ function program() {
       const trianglesIndices = this.trianglesIndices ?? Shape.prototype.getTriangleIndices(vertices);
 
       if (vertices.length === 3) {
-        // follows formula I = M / 6 * (a^2 + b^2 + c^2)
+        // follows formula I = M / 6 * (a^2 + b^2 + c^2) for triangular lamina about their polar centroidal axis. very clean indeed
         return (
           (area / 36) *
           vertices.reduce((sqSideLengthSum, vertex, index) => {
@@ -464,7 +462,6 @@ function program() {
       }
 
       let centroid = this.centroid ?? Shape.prototype.getCentroid(vertices);
-      console.log(vertices.length, centroid);
 
       let trianglesVertices = [];
       for (let i = 0; i < trianglesIndices.length; i += 3) {
@@ -475,7 +472,6 @@ function program() {
         ]);
       }
 
-      console.log(trianglesVertices);
       return trianglesVertices.reduce((sum, triangleVertices) => {
         // follows parallel axis theorem (I = I_cm + Md^2)
         let momentOfInertia = Shape.prototype.getMomentOfInertia(triangleVertices);
@@ -741,7 +737,7 @@ function program() {
       this.id = newid();
       this.x = params.x || 0;
       this.y = params.y || 0;
-      this.position = retDef(params.position, new Vector(0, 0));
+      this.position = params.position ?? new Vector(0, 0);
       this.dir = params.dir || 0;
       this.shape = params.shape || 0;
       this.trueColor = new Color(random(-15, 30), 0.6, 1, "HSV");
@@ -953,7 +949,7 @@ function program() {
     new Base({
       position: new Vector(-100, 0),
       dir: 0,
-      shape: newPolygon(regularPolyVerts(0, 0, 35, 50), new Color(255, 0, 0))
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
     }),
     new Base({
       position: new Vector(100, 0),
@@ -962,14 +958,10 @@ function program() {
     })
   );
 
-  console.log(boxes[boxes.length - 1].hitbox.getArea());
-  console.log(boxes[boxes.length - 2].hitbox.getArea());
-  console.log(boxes[boxes.length - 1].hitbox.getMomentOfInertia());
-  console.log(boxes[boxes.length - 2].hitbox.getMomentOfInertia());
-  let vertices = polyVerts(0, 5, 5, 0, -5, 0);
-  console.log(vertices);
-  console.log("centroid", Shape.prototype.getCentroid(vertices));
-  console.log("moment", Shape.prototype.getMomentOfInertia(vertices));
+  console.log("Area", boxes[boxes.length - 1].hitbox.getArea());
+  console.log("Area", boxes[boxes.length - 2].hitbox.getArea());
+  console.log("Moment Of Inertia", boxes[boxes.length - 1].hitbox.getMomentOfInertia());
+  console.log("Moment Of Inertia", boxes[boxes.length - 2].hitbox.getMomentOfInertia());
 
   const displayPeriod = 60;
   class Performance {
