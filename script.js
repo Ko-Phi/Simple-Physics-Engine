@@ -5,7 +5,7 @@ function program() {
   const canvasHalfHeight = height / 2;
 
   // Simulation Options
-  const initialVelocity = true; // objects begin with an intial velocity
+  const initialVelocity = false; // objects begin with an intial velocity
   const periodicVelocityShifts = false; // velocity randomized periodically
   const velocityMagnitude = 5; // alters the magnitude of said velocity
 
@@ -18,7 +18,7 @@ function program() {
   const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
 
   // Box Count
-  const insertCount = 1000;
+  const insertCount = 0;
   const scale = 12;
   // const moreBoxes = true; // replaces the usual two boxes with 5
   // const veryMoreBoxes = true; // a lot of boxes
@@ -31,6 +31,7 @@ function program() {
   const displayAABB = false; // aabbs drawn. Uses rect() so not very good for performance
   const displayGridCheck = false; // checked grids are highlighted. Very performance intensive
   const sameColor = false; // shapes drawn with the same color. Minor performance gain
+  const displayTriangulation = true;
 
   /**
 	  *VISUALIZER FLASHING WARNING WHEN OBJECTS COLLIDE AT CORNERS*
@@ -122,6 +123,12 @@ function program() {
   // returns first defined value
   const retDef = (input1, input2) => (input1 !== undefined ? input1 : input2);
 
+  function getItem(array, index) {
+    if (index >= array.length) return array[index % array.length];
+    else if (index < 0) return array[(index % array.length) + array.length];
+    else return array[index];
+  }
+
   let idCount = 0;
   const newid = () => idCount++;
 
@@ -184,6 +191,12 @@ function program() {
       if (typeof vector === "number") vectorX = vectorY = vector;
       else [vectorX, vectorY] = [vector.x, vector.y];
       return this.x * vector.x + this.y * vector.y;
+    }
+    crossProduct(vector) {
+      let vectorX, vectorY;
+      if (typeof vector === "number") vectorX = vectorY = vector;
+      else [vectorX, vectorY] = [vector.x, vector.y];
+      return -(this.x * vectorY - this.y * vectorX);
     }
     perpendicular() {
       [this.x, this.y] = [-this.y, this.x];
@@ -369,34 +382,18 @@ function program() {
 
   const world = new SpatialHashGrid(gridSize);
 
-  class Shape {
-    constructor(params) {
-      this.color = params.color;
-      this.type = params.type || "Polygon";
-      if (this.type === "Polygon") this.vertices = params.vertices;
-      else if (this.type === "Circle") {
-        this.center = retDef(params.center, new Vector(0, 0));
-        this.radius = params.radius;
-      }
-    }
-    draw(dx = 0, dy = 0) {
-      if (!sameColor) fill(this.color.cachedValue);
-      if (this.type === "Polygon") {
-        beginShape();
-        for (const vert of this.vertices) vertex(vert.x + dx, vert.y + dy);
-        endShape(CLOSE);
-      } else if (this.type === "Circle")
-        ellipse(this.center.x, this.center.y, this.radius * 2, this.radius * 2);
-    }
-  }
-
-  function regularPolyVerts(x, y, r, n) {
+  function regularPolyVerts(x, y, radius, sideCount) {
     const vertices = [];
-    for (let i = 0; i < n; i++)
-      vertices.push(new Vector(x + r * Math.cos((2 * PI * i) / n), y + r * Math.sin((2 * PI * i) / n)));
+    for (let i = 0; i < sideCount; i++)
+      vertices.push(
+        new Vector(
+          x + radius * Math.cos((2 * PI * i) / sideCount),
+          y + radius * Math.sin((2 * PI * i) / sideCount)
+        )
+      );
     return vertices;
   }
-  function polyVerts(inputs) {
+  function polyVerts(...inputs) {
     let vertices = [];
     for (let i = 0; i < inputs.length; i += 2) vertices.push(new Vector(inputs[i], inputs[i + 1]));
     return vertices;
@@ -419,6 +416,139 @@ function program() {
     });
   }
 
+  class Shape {
+    constructor(params) {
+      this.color = params.color;
+      this.type = params.type || "Polygon";
+      if (this.type === "Polygon") this.vertices = params.vertices;
+      else if (this.type === "Circle") {
+        this.center = retDef(params.center, new Vector(0, 0));
+        this.radius = params.radius;
+      }
+      this.rho = 1;
+    }
+    getCentroid(vertices) {
+      vertices = vertices ?? this.vertices;
+      return vertices.reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0)).divide(vertices.length);
+    }
+    getArea(vertices) {
+      vertices = vertices ?? this.vertices;
+      if (this.type === "Circle") return PI * sq(this.radius);
+      // something something shoelaces
+      return (
+        0.5 *
+        abs(
+          vertices.reduce((area, vertex, index, vertices) => {
+            const nextVertex = vertices[(index + 1) % vertices.length];
+            return area + vertex.x * nextVertex.y - vertex.y * nextVertex.x;
+          }, 0)
+        )
+      );
+    }
+    getMomentOfInertia(vertices) {
+      if (this.type === "Circle") return 0.5 * this.getArea() * this.rho * sq(this.radius);
+
+      vertices = vertices ?? this.vertices;
+      const area = this.area ?? Shape.prototype.getArea(vertices);
+      const trianglesIndices = this.trianglesIndices ?? Shape.prototype.getTriangleIndices(vertices);
+
+      if (vertices.length === 3) {
+        // follows formula I = M / 6 * (a^2 + b^2 + c^2)
+        return (
+          (area / 36) *
+          vertices.reduce((sqSideLengthSum, vertex, index) => {
+            const nextVertex = vertices[(index + 1) % vertices.length];
+            return sqSideLengthSum + nextVertex.copy().subtract(vertex).getSqMag();
+          }, 0)
+        );
+      }
+
+      let centroid = this.centroid ?? Shape.prototype.getCentroid(vertices);
+      console.log(vertices.length, centroid);
+
+      let trianglesVertices = [];
+      for (let i = 0; i < trianglesIndices.length; i += 3) {
+        trianglesVertices.push([
+          vertices[trianglesIndices[i]],
+          vertices[trianglesIndices[i + 1]],
+          vertices[trianglesIndices[i + 2]]
+        ]);
+      }
+
+      console.log(trianglesVertices);
+      return trianglesVertices.reduce((sum, triangleVertices) => {
+        // follows parallel axis theorem (I = I_cm + Md^2)
+        let momentOfInertia = Shape.prototype.getMomentOfInertia(triangleVertices);
+        let radiusSquared = Shape.prototype.getCentroid(triangleVertices).subtract(centroid).getSqMag();
+        let mass = Shape.prototype.getArea(triangleVertices) * this.rho;
+        return sum + momentOfInertia + mass * radiusSquared;
+      }, 0);
+    }
+    getTriangleIndices(vertices) {
+      if (this.type === "Circle") return;
+      vertices = vertices ?? this.vertices;
+      let trianglesIndices = [];
+      let vertexIndices = vertices.map((_, index) => index);
+      let attempts = 0;
+      while (vertexIndices.length > 3 && attempts < 300) {
+        checkPossibleEar: for (let i = 0; i < vertexIndices.length; i++) {
+          const indexA = getItem(vertexIndices, i - 1);
+          const indexB = vertexIndices[i];
+          const indexC = getItem(vertexIndices, i + 1);
+
+          const vertexA = vertices[indexA];
+          const vertexB = vertices[indexB];
+          const vertexC = vertices[indexC];
+
+          const vectorBA = vertexA.copy().subtract(vertexB);
+          const vectorBC = vertexC.copy().subtract(vertexB);
+          // reflex check
+          if (vectorBA.crossProduct(vectorBC) < 0) continue;
+
+          // point-triangle overlap check
+          for (let j = 0; j < vertices.length; j++) {
+            const triangleVertices = [vertexA, vertexB, vertexC];
+
+            const point = vertices[j];
+            if (triangleVertices.some((vertex) => vertex === point)) continue;
+
+            let hasNegative, hasPositive;
+            triangleVertices.forEach((vector, indexIndex, thisArray) => {
+              const currentVertex = vector;
+              const nextVertex = getItem(thisArray, indexIndex + 1);
+
+              const vectorCurrNext = nextVertex.copy().subtract(currentVertex);
+
+              const vectorCurrPoint = point.copy().subtract(currentVertex);
+
+              const result = vectorCurrNext.crossProduct(vectorCurrPoint);
+              if (result < 0) hasNegative = true;
+              if (result > 0) hasPositive = true;
+            });
+            if (!(hasPositive && hasNegative)) continue checkPossibleEar;
+          }
+
+          trianglesIndices.push(indexA, indexB, indexC);
+          vertexIndices = vertexIndices.filter((index) => index !== indexB);
+          break;
+        }
+        attempts++;
+      }
+      if (attempts > 300) console.log("failure");
+      trianglesIndices.push(...vertexIndices);
+      return trianglesIndices;
+    }
+    draw(dx = 0, dy = 0) {
+      if (!sameColor) fill(this.color.cachedValue);
+      if (this.type === "Polygon") {
+        beginShape();
+        for (const vert of this.vertices) vertex(vert.x + dx, vert.y + dy);
+        endShape(CLOSE);
+      } else if (this.type === "Circle")
+        ellipse(this.center.x, this.center.y, this.radius * 2, this.radius * 2);
+    }
+  }
+
   class Hitbox extends Shape {
     constructor(shape, base) {
       super(shape);
@@ -427,10 +557,32 @@ function program() {
       this.normals = [];
       this.cachedDir = null;
       this.lastUpdate = "None";
-
-      // cache everything
       this.aabb = {};
       this.cachedNormals = [];
+
+      this.cacheUpdate(base);
+      this.shallowUpdate(base);
+      this.trianglesIndices = this.getTriangleIndices();
+    }
+    drawTriangles(base) {
+      noFill();
+      for (let i = 0; i < this.trianglesIndices.length; i += 3) {
+        base.trueColor.toHSV();
+        let hue = base.trueColor.channels[0];
+        hue = map(i, 0, this.trianglesIndices.length - 1, hue, hue + 6);
+        fill(new Color(hue, 0.6, 1, "HSV").value());
+        triangle(
+          this.vertices[this.trianglesIndices[i]].x,
+          this.vertices[this.trianglesIndices[i]].y,
+          this.vertices[this.trianglesIndices[i + 1]].x,
+          this.vertices[this.trianglesIndices[i + 1]].y,
+          this.vertices[this.trianglesIndices[i + 2]].x,
+          this.vertices[this.trianglesIndices[i + 2]].y
+        );
+      }
+    }
+    cacheUpdate(base) {
+      // cache everything
       if (this.type === "Circle") {
         this.aabb.width = this.radius * 2;
         this.aabb.height = this.aabb.width;
@@ -474,9 +626,9 @@ function program() {
         this.aabb.height = 2 * this.radius;
         this.aabb.center = this.center;
       }
-      this.broadUpdate(base);
     }
-    broadUpdate(base) {
+
+    shallowUpdate(base) {
       this.lastUpdate = "AABB";
 
       // check if rotation recalc neccessary
@@ -638,6 +790,7 @@ function program() {
       translate(this.position.x + canvasHalfWidth, this.position.y + height / 2);
       if (this.shape.type !== "Circle") rotate(this.dir);
       this.shape.draw(0, 0);
+      if (this.hitbox.type !== "Circle" && displayTriangulation) this.hitbox.drawTriangles(this);
       popMatrix();
     }
     checkCollision(otherBase) {
@@ -796,41 +949,27 @@ function program() {
     );
   }
 
-  /*
-  if (!veryMoreBoxes && !considerablyLargeAmountOfBoxesToInsert) {
-    boxes.push(
-      new Base({
-        position: new Vector(-100, 0),
-        dir: 0,
-        shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
-      }),
-      new Base({
-        position: new Vector(100, 0),
-        dir: 0,
-        shape: newCircle(new Vector(0, 0), 25, new Color(255, 0, 0))
-      })
-    );
-    if (moreBoxes) {
-      boxes.push(
-        new Base({
-          position: new Vector(0, -100),
-          dir: PI / 2,
-          shape: newPolygon(polyVerts([-25, -25, 25, -25, 25, 25, -25, 25, -50, 0]), new Color(255, 0, 0))
-        }),
-        new Base({
-          position: new Vector(0, 0),
-          dir: 0,
-          shape: newPolygon(regularPolyVerts(0, 0, 35, 3), new Color(255, 0, 0))
-        }),
-        new Base({
-          position: new Vector(0, 100),
-          dir: 0,
-          shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
-        })
-      );
-    }
-  }
-  */
+  boxes.push(
+    new Base({
+      position: new Vector(-100, 0),
+      dir: 0,
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 50), new Color(255, 0, 0))
+    }),
+    new Base({
+      position: new Vector(100, 0),
+      dir: 0,
+      shape: newCircle(new Vector(0, 0), 35, new Color(255, 0, 0))
+    })
+  );
+
+  console.log(boxes[boxes.length - 1].hitbox.getArea());
+  console.log(boxes[boxes.length - 2].hitbox.getArea());
+  console.log(boxes[boxes.length - 1].hitbox.getMomentOfInertia());
+  console.log(boxes[boxes.length - 2].hitbox.getMomentOfInertia());
+  let vertices = polyVerts(0, 5, 5, 0, -5, 0);
+  console.log(vertices);
+  console.log("centroid", Shape.prototype.getCentroid(vertices));
+  console.log("moment", Shape.prototype.getMomentOfInertia(vertices));
 
   const displayPeriod = 60;
   class Performance {
@@ -943,7 +1082,7 @@ function program() {
       box.update();
       Perf.updateMetric("boxUpdate");
       if (focus === box.id) box.getInput();
-      box.hitbox.broadUpdate(box);
+      box.hitbox.shallowUpdate(box);
       Perf.updateMetric("aabbUpdate");
       world.update(box);
       Perf.updateMetric("gridUpdate");
