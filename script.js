@@ -18,7 +18,7 @@ function program() {
   const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
 
   // Box Count
-  const insertCount = 50;
+  const insertCount = 60;
   const scale = 32;
   const scaleVariance = 0.3;
   // const moreBoxes = true; // replaces the usual two boxes with 5
@@ -504,14 +504,21 @@ function program() {
       trianglesIndices.push(...vertexIndices);
       return trianglesIndices;
     }
-    draw(dx = 0, dy = 0) {
+    draw(dx = 0, dy = 0, base) {
       if (!sameColor) fill(this.color.cachedValue);
       if (this.type === "Polygon") {
         beginShape();
         for (const vert of this.vertices) vertex(vert.x + dx, vert.y + dy);
         endShape(CLOSE);
-      } else if (this.type === "Circle")
+      } else if (this.type === "Circle") {
         ellipse(this.center.x, this.center.y, this.radius * 2, this.radius * 2);
+        line(
+          this.center.x,
+          this.center.y,
+          this.radius * cos(base.dir),
+          this.radius * sin(base.dir),
+        );
+      }
     }
   }
 
@@ -534,7 +541,7 @@ function program() {
       noFill();
       for (let i = 0; i < this.trianglesIndices.length; i += 3) {
         base.trueColor.toHSV();
-        stroke(0, 0, 0, 100);
+        stroke(0, 0, 0, 30);
         let hue = base.trueColor.channels[0];
         hue = map(i, 0, this.trianglesIndices.length - 1, hue, hue + 20);
         fill(new Color(hue, 0.6, 1, "HSV").value());
@@ -724,7 +731,7 @@ function program() {
       this.position = params.position ?? new Vector(0, 0);
       this.dir = params.dir || 0;
       this.shape = params.shape || 0;
-      this.trueColor = new Color(random(-15, 30), 0.6, 1, "HSV");
+      this.trueColor = new Color(random(-15, 40), 0.6, 1, "HSV");
 
       this.hitbox = new Hitbox(params.shape, this);
       this.axesBuffer = [];
@@ -792,7 +799,7 @@ function program() {
         this.position.y + height / 2,
       );
       if (this.shape.type !== "Circle") rotate(this.dir);
-      this.shape.draw(0, 0);
+      this.shape.draw(0, 0, this);
       if (this.hitbox.type !== "Circle" && displayTriangulation)
         this.hitbox.drawTriangles(this);
       popMatrix();
