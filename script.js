@@ -906,7 +906,8 @@ function program() {
       baseB.position.add(displacement);
       // get contact points
       let contactPoints = [];
-      if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Polygon") {
+      const collisionType = baseA.hitbox.type + "-" + baseB.hitbox.type;
+      if (collisionType === "Polygon-Polygon") {
         /* A is the checked vertex. BC is the current edge of the other base. P is the closest point
               /B
              / |
@@ -943,6 +944,14 @@ function program() {
             });
           });
         });
+      } else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
+        let circleBase, otherBase;
+        if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB];
+        else [circleBase, otherBase] = [baseB, baseA];
+        contactPoints.push(otherBase.hitbox.closestPointToCenterOf(circleBase));
+      } else if (collisionType === "Circle-Circle") {
+        const centerAToCenterB = baseB.position.copy().subtract(baseA.position).normalize();
+        contactPoints.push(baseA.position.copy().add(centerAToCenterB.copy().multiply(baseA.hitbox.radius)));
       }
       console.log(contactPoints.length);
       for (const point of contactPoints) {
@@ -1002,13 +1011,24 @@ function program() {
     new Base({
       position: new Vector(-100, 0),
       dir: 0,
-      shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
+      //shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
+      shape: newCircle(new Vector(0, 0), 20, new Color(255, 0, 0))
     }),
     new Base({
       position: new Vector(100, 0),
       dir: 0,
       shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
-      //shape: newCircle(new Vector(0, 0), 35, new Color(255, 0, 0))
+    }),
+    new Base({
+      position: new Vector(0, -100),
+      dir: 0,
+      // shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
+      shape: newCircle(new Vector(0, 0), 35, new Color(255, 0, 0))
+    }),
+    new Base({
+      position: new Vector(0, 100),
+      dir: 0,
+      shape: newPolygon(regularPolyVerts(0, 0, 35, 8), new Color(255, 0, 0))
     })
   );
 
