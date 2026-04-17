@@ -19,7 +19,7 @@ function program() {
   const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
 
   // Box Count
-  const insertCount = 50;
+  const insertCount = 70;
   const scale = 32;
   const scaleVariance = 0.1;
   // const moreBoxes = true; // replaces the usual two boxes with 5
@@ -465,11 +465,9 @@ function program() {
         inertiaOrigin *= this.rho / 12;
         this.momentOfInertia =
           inertiaOrigin - this.mass * this.centroid.getSqMag();
-        console.log(this.vertices.length, this.momentOfInertia);
 
         let maxSqRadius = -Infinity;
-        console.log(this.rotatedVertices);
-        this.rotatedVertices.forEach((vertex, index, vertices) => {
+        this.vertices.forEach((vertex, index, vertices) => {
           const nextVertex = vertices.getItem(index + 1);
           const edge = nextVertex.copy().subtract(vertex);
           let normal = edge.copy().perpendicular().normalize();
@@ -593,8 +591,6 @@ function program() {
           this.cachedNormals[i] = normal.normalize();
           this.normals[i] = this.cachedNormals[i].copy();
         }
-        for (const normal of this.cachedNormals)
-          if (normal.getMag() > 1) println("oh no");
         this.radius = sqrt(maxSqRadius);
         // Better for more uniform shapes (this scenario)
         this.aabb.width = 2 * this.radius;
@@ -736,7 +732,7 @@ function program() {
           velocityMagnitude * random(0.75, 1.25),
           "dirMag",
         );
-        this.omega = random(-0.25, 0.25);
+        this.omega = random(-0.15, 0.15);
       } else {
         this.velocity = new Vector(0, 0);
         this.omega = 0;
@@ -748,8 +744,11 @@ function program() {
       const input_x = (keys[RIGHT] || keys[68]) - (keys[LEFT] || keys[65]);
       const input_y = (keys[DOWN] || keys[83]) - (keys[UP] || keys[87]);
       const input_dir = keys[69] - keys[81];
-      this.position.add(new Vector(input_x, input_y).normalize());
-      this.dir += input_dir / 20;
+      if (this.velocity.getMag() < 3)
+        this.velocity.add(new Vector(input_x, input_y).normalize().divide(5));
+      else this.velocity.normalize().multiply(2.9);
+      if (abs(this.omega) < 0.1) this.omega += input_dir / 100;
+      else this.omega = Math.sign(this.omega) * 0.09;
     }
     update() {
       this.ticks++;
@@ -905,7 +904,6 @@ function program() {
     handleCollision(data) {
       if (!data.colliding) return;
       const axis = data.axis;
-      const tangent = axis.copy().perpendicular();
       const MTV = data.axis.copy().multiply(data.overlap);
       const baseB = data.baseB;
       const baseA = data.baseA;
@@ -1023,7 +1021,7 @@ function program() {
               0,
               0,
               ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
-              ceil(random(2, 10)),
+              ceil(random(2, 7)),
             ),
             new Color(255, 0, 0),
           )
@@ -1084,13 +1082,16 @@ function program() {
       }),
       new Base({
         position: new Vector(0, 100),
-        dir: 0,
-        shape: newPolygon(regularPolyVerts(0, 0, 35, 80), new Color(255, 0, 0)),
+        dir: 1.5,
+        shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0)),
       }),
       new Base({
         position: new Vector(0, 200),
-        dir: 0,
-        shape: newPolygon(polyVerts(-4, -4, -4, 4, 4, 4), new Color(255, 0, 0)),
+        dir: 1.2,
+        shape: newPolygon(
+          polyVerts(-25, -50, 25, -50, 25, 50, -25, 50),
+          new Color(255, 0, 0),
+        ),
       }),
     );
 
