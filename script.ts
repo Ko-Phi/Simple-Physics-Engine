@@ -6,7 +6,7 @@ function program() {
   const canvasHalfHeight = height / 2;
 
   // Simulation Options
-  const initialVelocity = false; // objects begin with an intial velocity
+  const initialVelocity = true; // objects begin with an intial velocity
   const periodicVelocityShifts = false; // velocity randomized periodically
   const velocityMagnitude = 5; // alters the magnitude of said velocity
 
@@ -19,12 +19,9 @@ function program() {
   const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
 
   // Box Count
-  const insertCount: number = 0;
+  const insertCount: number = 50;
   const scale = 32;
   const scaleVariance = 0;
-  // const moreBoxes = true; // replaces the usual two boxes with 5
-  // const veryMoreBoxes = true; // a lot of boxes
-  // const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
 
   // Visuals
   // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
@@ -65,7 +62,7 @@ function program() {
     add(vector: number | Vector): Vector {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       this.x += vectorX;
       this.y += vectorY;
       return this;
@@ -73,7 +70,7 @@ function program() {
     subtract(vector: number | Vector): Vector {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       this.x -= vectorX;
       this.y -= vectorY;
       return this;
@@ -81,7 +78,7 @@ function program() {
     multiply(vector: number | Vector): Vector {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       this.x *= vectorX;
       this.y *= vectorY;
       return this;
@@ -89,7 +86,7 @@ function program() {
     divide(vector: number | Vector): Vector {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       this.x /= vectorX;
       this.y /= vectorY;
       return this;
@@ -102,13 +99,13 @@ function program() {
     dotProduct(vector: number | Vector): number {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       return this.x * vectorX + this.y * vectorY;
     }
     crossProduct(vector: number | Vector): number {
       let vectorX, vectorY;
       if (typeof vector === "number") vectorX = vectorY = vector;
-      else [vectorX, vectorY] = [vector.x, vector.y];
+      else[vectorX, vectorY] = [vector.x, vector.y];
       return -(this.x * vectorY - this.y * vectorX);
     }
     perpendicular(): Vector {
@@ -134,7 +131,7 @@ function program() {
       let alpha, model;
       if (input1 === undefined) [alpha, model] = [255, "RGB"];
       else if (typeof input1 === "string") [alpha, model] = [255, input1];
-      else [alpha, model] = [input1, input2];
+      else[alpha, model] = [input1, input2];
 
       this.channels = [c1, c2, c3, alpha];
       this.model = model ?? "RGB";
@@ -714,7 +711,7 @@ function program() {
         // get closest point on edge and add to normals
         let circleBase, otherBase;
         if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB];
-        else [circleBase, otherBase] = [baseB, baseA];
+        else[circleBase, otherBase] = [baseB, baseA];
         const centroid = circleBase.position.copy().add(circleBase.hitbox.centroid);
 
         const closestPoint = otherBase.hitbox.closestPointToCentroidOf(circleBase);
@@ -808,7 +805,7 @@ function program() {
       } else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
         let circleBase, otherBase;
         if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB];
-        else [circleBase, otherBase] = [baseB, baseA];
+        else[circleBase, otherBase] = [baseB, baseA];
         contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase));
       } else if (collisionType === "Circle-Circle") {
         const centroidAToCentroidB = baseB.position.copy().subtract(baseA.position).normalize();
@@ -862,14 +859,14 @@ function program() {
     let shape =
       (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
         ? newPolygon(
-            regularPolyVerts(
-              0,
-              0,
-              ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
-              ceil(random(2, 7))
-            ),
-            new Color(255, 0, 0)
-          )
+          regularPolyVerts(
+            0,
+            0,
+            ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
+            ceil(random(2, 7))
+          ),
+          new Color(255, 0, 0)
+        )
         : newCircle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color(255, 0, 0));
     if (random(0, 5) > 4) {
       let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4);
@@ -1120,11 +1117,12 @@ function program() {
 
     Perf.getTotal();
 
+    const totalCells = (canvasHalfWidth * 2) * (canvasHalfHeight * 2) / gridSize ** 2
     const countMetrics = [
       "Cells Filled",
-      world.grid.size,
+      world.grid.size + " / " + totalCells,
       "Cells Checked",
-      cellsChecked,
+      cellsChecked + " / " + totalCells,
       "SAT Calls",
       collisionChecks,
       "Object Count",

@@ -5,7 +5,7 @@ function program() {
     const canvasHalfWidth = width / 2;
     const canvasHalfHeight = height / 2;
     // Simulation Options
-    const initialVelocity = false; // objects begin with an intial velocity
+    const initialVelocity = true; // objects begin with an intial velocity
     const periodicVelocityShifts = false; // velocity randomized periodically
     const velocityMagnitude = 5; // alters the magnitude of said velocity
     const collisionImpulse = true; // objects bounce off each other on collision
@@ -15,12 +15,9 @@ function program() {
     const allPolys = false; // all shapes are polygons. Slightly more performance intensive
     const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
     // Box Count
-    const insertCount = 0;
+    const insertCount = 50;
     const scale = 32;
     const scaleVariance = 0;
-    // const moreBoxes = true; // replaces the usual two boxes with 5
-    // const veryMoreBoxes = true; // a lot of boxes
-    // const considerablyLargeAmountOfBoxesToInsert = true; // way too many boxes
     // Visuals
     // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
     const FPS = insertCount >= 750 ? 30 : 60;
@@ -1026,11 +1023,12 @@ function program() {
         }
         Perf.updateMetric("handleCollisions");
         Perf.getTotal();
+        const totalCells = (canvasHalfWidth * 2) * (canvasHalfHeight * 2) / gridSize ** 2;
         const countMetrics = [
             "Cells Filled",
-            world.grid.size,
+            world.grid.size + " / " + totalCells,
             "Cells Checked",
-            cellsChecked,
+            cellsChecked + " / " + totalCells,
             "SAT Calls",
             collisionChecks,
             "Object Count",
