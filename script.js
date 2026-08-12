@@ -868,23 +868,13 @@ function program() {
         }
         getMetricData(key) {
             let buffer = this.metrics[key].buffer;
-            let mini = Infinity;
-            let maxi = -Infinity;
-            let sum = 0;
-            for (const data of buffer) {
-                mini = min(data, buffer);
-                maxi = max(data, buffer);
-                sum += data;
-            }
-            const average = sum / buffer.length;
-            let percentage;
-            if (key !== "total") {
+            const average = buffer.reduce((acc, time) => acc + time) / buffer.length;
+            let percentage = 100;
+            if (key !== "total")
                 percentage = (average / this.metrics.total.savedData.average) * 100;
-            }
-            else {
-                percentage = 100;
-            }
-            return { min: mini, max: maxi, average: average, percentage: percentage };
+            return {
+                min: min(buffer), max: max(buffer), average: average, percentage: percentage
+            };
         }
         // for next frame
         resetMetrics() {
