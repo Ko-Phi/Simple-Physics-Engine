@@ -29,6 +29,10 @@ function program() {
     frameRate(FPS);
     const dt = 60 / FPS;
     const rounD = (num, deciPlace) => round(num * pow(10, deciPlace)) / pow(10, deciPlace);
+    const shift = (xs) => xs.slice(1).concat(xs[0]);
+    const zip = (...arrays) => arrays[0].map((_, index) => arrays.map(array => array[index]));
+    const zipWith = (arr1, arr2, fn) => arr1.map((val, i) => fn(val, arr2[i]));
+    const zipShift = (xs) => zip(xs, shift(xs));
     let idCount = 0;
     const newid = () => idCount++;
     var keys = Array(100).fill(false);
@@ -337,52 +341,21 @@ function program() {
             this.lastUpdate = "None";
             this.cachedNormals = [];
             this.rho = rho ?? 1;
-            this.area = this.vertices.reduce((area, vertex, index, vertices) => {
-                const nextVertex = vertices[(index + 1) % vertices.length];
-                return area + vertex.crossProduct(nextVertex);
-            }, 0);
-            if (this.area < 0)
-                this.windingOrder = "CW";
-            else
-                this.windingOrder = "CCW";
+            this.area = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0);
+            this.windingOrder = this.area < 0 ? "CW" : "CCW";
             this.area = abs(this.area) / 2;
-            console.log(this.area, this.windingOrder);
-            let loopedVertices = this.vertices;
-            if (this.windingOrder === "CW")
-                loopedVertices = this.vertices.slice().reverse();
-            let inertiaOrigin = 0;
-            this.centroid = new Vector(0, 0);
-            const cosT = Math.cos(base.dir);
-            const sinT = Math.sin(base.dir);
-            loopedVertices.forEach((vertex, index, vertices) => {
-                const nextVertex = vertices[(index + 1) % vertices.length];
-                const subArea = vertex.crossProduct(nextVertex);
-                this.centroid = this.centroid.add(vertex.add(nextVertex).scale(subArea));
-                inertiaOrigin +=
-                    subArea *
-                        (vertex.getSqMag() +
-                            vertex.dotProduct(nextVertex) +
-                            nextVertex.getSqMag());
-                this.rotatedVertices[index] = new Vector(vertex.x * cosT - vertex.y * sinT, vertex.x * sinT + vertex.y * cosT);
-            });
             this.mass = this.area * this.rho;
+            this.rotatedVertices = this.rotatedVertices.map(v => v.rotate(base.dir));
+            const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice();
+            this.momentOfInertia = zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => (subArea => inertia +
+                subArea *
+                    (vertex.getSqMag() +
+                        vertex.dotProduct(nextVertex) +
+                        nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) * (this.rho / 12) - this.mass * this.centroid.getSqMag();
+            this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize());
+            this.normals = this.cachedNormals.map(n => n.copy());
             this.cachedCentroid = this.centroid.copy();
-            inertiaOrigin *= this.rho / 12;
-            this.momentOfInertia =
-                inertiaOrigin - this.mass * this.centroid.getSqMag();
-            let maxSqRadius = -Infinity;
-            this.vertices.forEach((vertex, index, vertices) => {
-                const nextVertex = vertices[(index + 1) % vertices.length];
-                const edge = nextVertex.subtract(vertex);
-                let normal = edge.perpendicular().normalize();
-                const direction = this.cachedCentroid.subtract(normal);
-                maxSqRadius = max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
-                if (normal.dotProduct(direction) < 0)
-                    normal = normal.negate();
-                this.cachedNormals[index] = normal.normalize();
-                this.normals[index] = this.cachedNormals[index].copy();
-            });
-            let doubleRadius = 2 * sqrt(maxSqRadius);
+            const doubleRadius = 2 * sqrt(this.vertices.reduce((maxSqRadius, vertex) => max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius), -Infinity));
             // Better for more uniform shapes (this scenario)
             this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
             this.shallowUpdate(base);
@@ -421,8 +394,7 @@ function program() {
             let minDistanceSquared = Infinity;
             const centroid = base.position.add(base.hitbox.centroid);
             // loop over this object's edges
-            this.transformedVertices.forEach((vertexA, index, vertices) => {
-                const vertexB = vertices[(index + 1) % vertices.length];
+            zipShift(this.transformedVertices).forEach(([vertexA, vertexB]) => {
                 // get closest point on side
                 const sideAB = vertexB.subtract(vertexA);
                 const sideACentroid = centroid.subtract(vertexA);
@@ -496,27 +468,8 @@ function program() {
             const projection = axis.dotProduct(centroid);
             return { min: projection - this.radius, max: projection + this.radius };
         }
-        closestPointToCentroidOf(base) {
-            let closestPoint = new Vector(0, 0);
-            let minDistanceSquared = Infinity;
-            const centroid = base.position.add(base.hitbox.centroid);
-            // loop over this object's edges
-            this.transformedVertices.forEach((vertexA, index, vertices) => {
-                const vertexB = vertices[(index + 1) % vertices.length];
-                // get closest point on side
-                const sideAB = vertexB.subtract(vertexA);
-                const sideACentroid = centroid.subtract(vertexA);
-                let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag();
-                projection = constrain(projection, 0, 1);
-                const point = vertexA.add(sideAB.scale(projection));
-                const difference = point.subtract(centroid);
-                const distanceSquared = difference.getSqMag();
-                if (distanceSquared < minDistanceSquared) {
-                    minDistanceSquared = distanceSquared;
-                    closestPoint = point;
-                }
-            });
-            return closestPoint;
+        closestPointToCentroidOf() {
+            throw "Uncalleable";
         }
     }
     // temp
