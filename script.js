@@ -289,7 +289,7 @@ function program() {
         centroid;
         color;
         radius;
-        constructor(centroid, radius, color = new Color([0, 0, 0, 0])) {
+        constructor(radius, color = new Color([0, 0, 0, 0]), centroid = new Vector(0, 0)) {
             this.type = "Circle";
             this.centroid = centroid;
             this.radius = radius;
@@ -454,7 +454,7 @@ function program() {
         cachedNormals;
         cachedCentroid;
         constructor(circle, base, rho) {
-            super(circle.centroid, circle.radius, circle.color);
+            super(circle.radius, circle.color, circle.centroid);
             this.rotatedVertices = [];
             this.transformedVertices = [];
             this.normals = [];
@@ -800,7 +800,7 @@ function program() {
     for (let i = 0; i < insertCount; i++) {
         let shape = (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
             ? new Polygon(regularPolyVerts(0, 0, ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)), ceil(random(2, 7))), new Color([255, 0, 0]))
-            : new Circle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]));
+            : new Circle(ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]));
         if (random(0, 5) > 4) {
             let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4);
             let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5;
@@ -809,7 +809,7 @@ function program() {
         boxes.push(new Base(new Vector(random(-canvasHalfWidth, canvasHalfWidth), random(-canvasHalfHeight, canvasHalfHeight)), random(0, 2 * PI), shape));
     }
     if (insertCount === 0)
-        boxes.push(new Base(new Vector(-100, 0), 0, new Circle(new Vector(0, 0), 20, new Color([255, 0, 0])), new Vector(1, 0)), new Base(new Vector(100, 0), 0, new Circle(new Vector(0, 0), 100, new Color([255, 0, 0]))), new Base(new Vector(0, -100), 0, new Circle(new Vector(0, 0), 35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
+        boxes.push(new Base(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Base(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Base(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
     const displayPeriod = 60;
     class Performance {
         metrics;

@@ -361,9 +361,9 @@ function program() {
     color: Color
     radius: number
     constructor(
-      centroid: Vector,
       radius: number,
       color: Color = new Color([0, 0, 0, 0]),
+      centroid: Vector = new Vector(0, 0),
     ) {
       this.type = "Circle"
       this.centroid = centroid
@@ -601,7 +601,7 @@ function program() {
     cachedCentroid: Vector
 
     constructor(circle: Circle, base: Base, rho?: number) {
-      super(circle.centroid, circle.radius, circle.color)
+      super(circle.radius, circle.color, circle.centroid)
       this.rotatedVertices = []
       this.transformedVertices = []
       this.normals = []
@@ -1026,7 +1026,6 @@ function program() {
           new Color([255, 0, 0]),
         )
         : new Circle(
-          new Vector(0, 0),
           ceil(scale * random(0.9, 1.1)),
           new Color([255, 0, 0]),
         )
@@ -1064,18 +1063,18 @@ function program() {
       new Base(
         new Vector(-100, 0),
         0,
-        new Circle(new Vector(0, 0), 20, new Color([255, 0, 0])),
+        new Circle(20, new Color([255, 0, 0])),
         new Vector(1, 0),
       ),
       new Base(
         new Vector(100, 0),
         0,
-        new Circle(new Vector(0, 0), 100, new Color([255, 0, 0])),
+        new Circle(100, new Color([255, 0, 0])),
       ),
       new Base(
         new Vector(0, -100),
         0,
-        new Circle(new Vector(0, 0), 35, new Color([255, 0, 0])),
+        new Circle(35, new Color([255, 0, 0])),
       ),
       new Base(
         new Vector(0, 100),
