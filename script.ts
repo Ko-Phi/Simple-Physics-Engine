@@ -35,8 +35,13 @@ function program() {
   frameRate(FPS)
   const dt = 60 / FPS
 
+  const sq = (n: number): number => n * n
+  const constrain = (n: number, maxi: number, mini: number) => Math.max(maxi, Math.min(mini, n))
   const rounD = (num: number, deciPlace: number): number =>
-    round(num * pow(10, deciPlace)) / pow(10, deciPlace)
+    Math.round(num * Math.pow(10, deciPlace)) / Math.pow(10, deciPlace)
+  const random = (min: number, max: number) => Math.random() * (max - min) + min
+  const range = (start: number, stop: number, step: number = 1) =>
+    Array.from({ length: Math.ceil((stop - start) / step) }, (_, i) => start + i * step)
 
   const shift = <Type>(xs: Array<Type>): Array<Type> => xs.slice(1).concat(xs[0])
   const zip = <Type>(...arrays: Array<Array<Type>>) =>
@@ -66,7 +71,7 @@ function program() {
     }
     copy = () => new Vector(this.x, this.y)
     getSqMag = () => sq(this.x) + sq(this.y)
-    getMag = () => sqrt(this.getSqMag())
+    getMag = () => Math.sqrt(this.getSqMag())
     theta = () => Math.atan2(this.y, this.x)
     add = (v: Vector): Vector => new Vector(this.x + v.x, this.y + v.y)
     negate = () => new Vector(-this.x, -this.y)
@@ -255,13 +260,13 @@ function program() {
       pushMatrix()
       translate(canvasHalfWidth, canvasHalfHeight)
       for (
-        let x = ceil(-width / this.cellSize) * this.cellSize;
+        let x = Math.ceil(-width / this.cellSize) * this.cellSize;
         x <= canvasHalfWidth;
         x += this.cellSize
       )
         line(x, height, x, -height)
       for (
-        let y = ceil(-height / this.cellSize) * this.cellSize;
+        let y = Math.ceil(-height / this.cellSize) * this.cellSize;
         y <= canvasHalfHeight;
         y += this.cellSize
       )
@@ -277,8 +282,8 @@ function program() {
     for (let i = 0; i < sideCount; i++)
       vertices.push(
         new Vector(
-          x + radius * Math.cos((2 * PI * i) / sideCount),
-          y + radius * Math.sin((2 * PI * i) / sideCount)
+          x + radius * Math.cos((2 * Math.PI * i) / sideCount),
+          y + radius * Math.sin((2 * Math.PI * i) / sideCount)
         )
       )
     return vertices
@@ -313,13 +318,13 @@ function program() {
       this.centroid = this.vertices
         .reduce(
           (sum, vertex) => {
-            maxSqRadius = max(vertex.getSqMag(), maxSqRadius)
+            maxSqRadius = Math.max(vertex.getSqMag(), maxSqRadius)
             return sum.add(vertex)
           },
           new Vector(0, 0)
         )
         .divide(this.vertices.length)
-      this.radius = sqrt(maxSqRadius)
+      this.radius = Math.sqrt(maxSqRadius)
     }
     draw(dx: number, dy: number, base: Base) {
       if (!sameColor) fill(this.color.cachedValue)
@@ -344,14 +349,14 @@ function program() {
       this.radius = radius
       this.color = color
     }
-    draw(dx: number, dy: number, base: Base) {
+    draw(_dx: number, _dy: number, base: Base) {
       if (!sameColor) fill(this.color.cachedValue)
       ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2)
       line(
         this.centroid.x,
         this.centroid.y,
-        this.radius * cos(base.dir),
-        this.radius * sin(base.dir)
+        this.radius * Math.cos(base.dir),
+        this.radius * Math.sin(base.dir)
       )
     }
   }
@@ -426,7 +431,7 @@ function program() {
         0
       )
       this.windingOrder = this.area < 0 ? "CW" : "CCW"
-      this.area = abs(this.area) / 2
+      this.area = Math.abs(this.area) / 2
       this.mass = this.area * this.rho
       this.rotatedVertices = this.rotatedVertices.map((v) => v.rotate(base.dir))
       const loopedVertices =
@@ -453,10 +458,10 @@ function program() {
       this.cachedCentroid = this.centroid.copy()
       const doubleRadius =
         2 *
-        sqrt(
+        Math.sqrt(
           this.vertices.reduce(
             (maxSqRadius, vertex) =>
-              max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius),
+              Math.max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius),
             -Infinity
           )
         )
@@ -554,7 +559,7 @@ function program() {
 
       this.rho = rho ?? 1
 
-      this.area = PI * sq(this.radius)
+      this.area = Math.PI * sq(this.radius)
       this.mass = this.area * this.rho
       this.momentOfInertia = 0.5 * this.mass * sq(this.radius)
 
@@ -633,7 +638,7 @@ function program() {
       this.axesBuffer = []
       if (initialVelocity) {
         this.velocity = new Vector(
-          random(0, 2 * PI),
+          random(0, 2 * Math.PI),
           velocityMagnitude * random(0.75, 1.25),
           "dirMag"
         )
@@ -643,7 +648,7 @@ function program() {
         this.omega = 0
       }
       this.velocity = velocity ?? new Vector(0, 0)
-      this.ticks = floor(random(0, 50))
+      this.ticks = Math.floor(random(0, 50))
     }
     getInput() {
       const input_x = (keys[RIGHT] || keys[68]) - (keys[LEFT] || keys[65])
@@ -653,7 +658,7 @@ function program() {
 
       if (this.velocity.getMag() < 3) this.velocity = this.velocity.add(translation.divide(5))
       else this.velocity = this.velocity.normalize().scale(2.9)
-      if (abs(this.omega) < 0.1) this.omega += input_dir / 100
+      if (Math.abs(this.omega) < 0.1) this.omega += input_dir / 100
       else this.omega = Math.sign(this.omega) * 0.09
     }
     update() {
@@ -665,18 +670,18 @@ function program() {
       if (velocity > mu) this.velocity = this.velocity.subtract(this.velocity.scale(mu / velocity))
       else this.velocity = new Vector(0, 0)
 
-      if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
+      if (Math.abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
         this.position.x =
           -Math.sign(this.position.x) * (canvasHalfWidth + this.hitbox.aabb.width / 2)
       }
-      if (abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
+      if (Math.abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
         this.position.y =
           -Math.sign(this.position.y) * (canvasHalfHeight + this.hitbox.aabb.width / 2)
       }
 
       if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
         this.velocity = new Vector(
-          random(0, 2 * PI),
+          random(0, 2 * Math.PI),
           velocityMagnitude * random(0.75, 1.25),
           "dirMag"
         )
@@ -716,7 +721,7 @@ function program() {
         if (sqDistance > sq(radiiSum)) {
           return { colliding: false }
         } else {
-          const overlap = sqrt(sqDistance) - radiiSum
+          const overlap = Math.sqrt(sqDistance) - radiiSum
           const normal = tCentroidA.subtract(tCentroidB).normalize()
           return {
             colliding: true,
@@ -741,7 +746,7 @@ function program() {
         // check if seperate
         if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
 
-        const overlap = min(projA.max, projB.max) - max(projA.min, projB.min)
+        const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
         if (overlap < minOverlap) {
           minOverlap = overlap
           minNormal = axis
@@ -766,7 +771,7 @@ function program() {
         // check if seperate
         if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
 
-        const overlap = min(projA.max, projB.max) - max(projA.min, projB.min)
+        const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
         if (overlap < minOverlap) {
           minOverlap = overlap
           minNormal = axis
@@ -897,17 +902,17 @@ function program() {
   let boxes: Base[] = []
   for (let i = 0; i < insertCount; i++) {
     let shape =
-      (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
+      (Math.ceil(random(0, 5)) > 3 && !allCircles) || allPolys
         ? new Polygon(
             regularPolyVerts(
               0,
               0,
-              ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
-              ceil(random(2, 7))
+              Math.ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
+              Math.ceil(random(2, 7))
             ),
             new Color([255, 0, 0])
           )
-        : new Circle(ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]))
+        : new Circle(Math.ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]))
     if (random(0, 5) > 4) {
       let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4)
       let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5
@@ -922,7 +927,7 @@ function program() {
           random(-canvasHalfWidth, canvasHalfWidth),
           random(-canvasHalfHeight, canvasHalfHeight)
         ),
-        random(0, 2 * PI),
+        random(0, 2 * Math.PI),
         shape
       )
     )
@@ -979,8 +984,8 @@ function program() {
       if (key !== "total") percentage = (average / this.metrics.total.savedData.average) * 100
 
       return {
-        min: min(buffer),
-        max: max(buffer),
+        min: Math.min(...buffer),
+        max: Math.max(...buffer),
         average: average,
         percentage: percentage,
       }
