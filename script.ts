@@ -77,7 +77,7 @@ function program() {
   class Color {
     channels: number[];
     model: string;
-    cachedValue: any;
+    cachedValue: number;
     constructor(c1: number, c2: number, c3: number, input1?: number | string, input2?: string) {
       let alpha, model;
       if (input1 === undefined) [alpha, model] = [255, "RGB"];

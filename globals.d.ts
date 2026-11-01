@@ -6,7 +6,7 @@ declare function color(
   c2?: number,
   c3?: number,
   alpha?: number,
-): any;
+): number;
 declare function background(
   c1: number,
   c2?: number,
