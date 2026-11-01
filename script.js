@@ -59,19 +59,18 @@ function program() {
     }
     class Color {
         channels;
+        alpha;
         model;
         cachedValue;
-        constructor(c1, c2, c3, input1, input2) {
-            let alpha, model;
-            if (input1 === undefined)
-                [alpha, model] = [255, "RGB"];
-            else if (typeof input1 === "string")
-                [alpha, model] = [255, input1];
-            else
-                [alpha, model] = [input1, input2];
-            this.channels = [c1, c2, c3, alpha];
-            this.model = model ?? "RGB";
+        constructor(channels, model = "RGB") {
+            this.channels = channels.slice(0, 3);
+            this.alpha = channels.length === 4 ? channels[3] : 255;
+            this.model = model;
             this.cachedValue = this.value();
+            this.toRGB();
+            this.toHSV();
+            this.toRGB();
+            this.toHSV();
         }
         toRGB() {
             if (this.model === "RGB")
@@ -79,7 +78,7 @@ function program() {
             const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]];
             const hueP = hue / 60;
             const chroma = val * sat;
-            const x = chroma * (1 - abs((hueP % 2) - 1));
+            const x = chroma * (1 - Math.abs((hueP % 2) - 1));
             let r, g, b;
             if (hueP < 1)
                 [r, g, b] = [chroma, x, 0];
@@ -95,43 +94,33 @@ function program() {
                 [r, g, b] = [chroma, 0, x];
             else
                 throw new Error("RGB undefined");
-            const m = val - chroma;
-            this.channels[0] = (r + m) * 255;
-            this.channels[1] = (g + m) * 255;
-            this.channels[2] = (b + m) * 255;
+            this.channels = ([r, g, b]).map(c => (c + val - chroma) * 255);
             this.model = "RGB";
         }
         toHSV() {
             if (this.model === "HSV")
                 return;
-            const rP = this.channels[0] / 255;
-            const gP = this.channels[1] / 255;
-            const bP = this.channels[2] / 255;
-            const cMax = max(rP, max(gP, bP));
-            const cMin = min(rP, min(gP, bP));
+            const [rP, gP, bP] = this.channels.slice(0, 3).map(c => c / 255);
+            const cMax = Math.max(rP, gP, bP);
+            const cMin = Math.min(rP, gP, bP);
             const delta = cMax - cMin;
-            let hue, sat, val;
+            let hue;
             if (delta === 0)
                 hue = 0;
             else if (cMax === rP)
                 hue = (((gP - bP) / delta) % 6) * 60;
             else if (cMax === gP)
                 hue = ((bP - rP) / delta + 2) * 60;
-            else if (cMax === bP)
-                hue = ((rP - gP) / delta + 4) * 60;
             else
                 throw new Error("Hue undefined");
-            sat = cMax === 0 ? 0 : delta / cMax;
-            val = cMax;
-            this.channels[0] = hue;
-            this.channels[1] = sat;
-            this.channels[2] = val;
+            const sat = cMax === 0 ? 0 : delta / cMax;
+            this.channels = [hue, sat, cMax];
             this.model = "HSV";
         }
         value() {
             if (this.model === "HSV")
                 this.toRGB();
-            return color(this.channels[0], this.channels[1], this.channels[2], this.channels[3]);
+            return color(this.channels[0], this.channels[1], this.channels[2], this.alpha);
         }
     }
     let cellsChecked = 0;
@@ -277,7 +266,7 @@ function program() {
         centroid;
         radius;
         constructor(type, color, vertices, centroid, radius) {
-            this.color = color ?? new Color(0, 0, 0, 0);
+            this.color = color ?? new Color([0, 0, 0, 0]);
             this.type = type;
             if (this.type === "Polygon") {
                 if (vertices === undefined)
@@ -499,7 +488,7 @@ function program() {
             this.position = position;
             this.dir = dir;
             this.shape = shape;
-            this.trueColor = new Color(random(-15, 40), 0.6, 1, "HSV");
+            this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV");
             this.hitbox = new Hitbox(shape, this);
             this.axesBuffer = [];
             if (initialVelocity) {
@@ -551,7 +540,7 @@ function program() {
                 this.omega = random(-0.01, 0.01) * scale;
             }
             if (focus === this.id)
-                this.shape.color = new Color(110, 0.4, 1, "HSV");
+                this.shape.color = new Color([110, 0.4, 1], "HSV");
             else
                 this.shape.color = this.trueColor;
         }
@@ -754,23 +743,23 @@ function program() {
     let boxes = [];
     for (let i = 0; i < insertCount; i++) {
         let shape = (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
-            ? newPolygon(regularPolyVerts(0, 0, ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)), ceil(random(2, 7))), new Color(255, 0, 0))
-            : newCircle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color(255, 0, 0));
+            ? newPolygon(regularPolyVerts(0, 0, ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)), ceil(random(2, 7))), new Color([255, 0, 0]))
+            : newCircle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]));
         if (random(0, 5) > 4) {
             let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4);
             let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5;
-            shape = newPolygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), new Color(255, 0, 0));
+            shape = newPolygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), new Color([255, 0, 0]));
         }
         boxes.push(new Base(new Vector(random(-canvasHalfWidth, canvasHalfWidth), random(-canvasHalfHeight, canvasHalfHeight)), random(0, 2 * PI), shape));
     }
     if (insertCount === 0)
-        boxes.push(new Base(new Vector(-100, 0), 0, newCircle(new Vector(0, 0), 20, new Color(255, 0, 0)), new Vector(1, 0)
+        boxes.push(new Base(new Vector(-100, 0), 0, newCircle(new Vector(0, 0), 20, new Color([255, 0, 0])), new Vector(1, 0)
         //shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
-        ), new Base(new Vector(100, 0), 0, newCircle(new Vector(0, 0), 100, new Color(255, 0, 0))
+        ), new Base(new Vector(100, 0), 0, newCircle(new Vector(0, 0), 100, new Color([255, 0, 0]))
         //shape: newPolygon(regularPolyVerts(0, 0, 55, 5), new Color(255, 0, 0))
         ), new Base(new Vector(0, -100), 0, 
         // shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
-        newCircle(new Vector(0, 0), 35, new Color(255, 0, 0))), new Base(new Vector(0, 100), 1.5, newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))), new Base(new Vector(0, 200), 1.2, newPolygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color(255, 0, 0))));
+        newCircle(new Vector(0, 0), 35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, newPolygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, newPolygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
     const displayPeriod = 60;
     class Performance {
         metrics;
