@@ -38,7 +38,11 @@ function program() {
         x;
         y;
         constructor(input1, input2, init = "component") {
-            [this.x, this.y] = init === "component" ? [input1, input2] : [input2 * Math.cos(input1), input2 * Math.sin(input1)];
+            ;
+            [this.x, this.y] =
+                init === "component"
+                    ? [input1, input2]
+                    : [input2 * Math.cos(input1), input2 * Math.sin(input1)];
         }
         copy = () => new Vector(this.x, this.y);
         getSqMag = () => sq(this.x) + sq(this.y);
@@ -49,7 +53,7 @@ function program() {
         subtract = (v) => this.add(v.negate());
         scale = (c) => new Vector(this.x * c, this.y * c);
         divide = (c) => this.scale(1 / c);
-        normalize = () => (r => r !== 0 ? this.divide(r) : this.copy())(this.getMag()); // I miss u haskell </3
+        normalize = () => (r => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()); // I miss u haskell </3
         dotProduct = (v) => this.x * v.x + this.y * v.y;
         crossProduct = (v) => -(this.x * v.y - this.y * v.x); // As world is inverted-cartesian
         perpendicular = () => new Vector(-this.y, this.x);
@@ -75,7 +79,11 @@ function program() {
         toRGB() {
             if (this.model === "RGB")
                 return;
-            const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]];
+            const [hue, sat, val] = [
+                this.channels[0],
+                this.channels[1],
+                this.channels[2],
+            ];
             const hueP = hue / 60;
             const chroma = val * sat;
             const x = chroma * (1 - Math.abs((hueP % 2) - 1));
@@ -94,7 +102,7 @@ function program() {
                 [r, g, b] = [chroma, 0, x];
             else
                 throw new Error("RGB undefined");
-            this.channels = ([r, g, b]).map(c => (c + val - chroma) * 255);
+            this.channels = [r, g, b].map(c => (c + val - chroma) * 255);
             this.model = "RGB";
         }
         toHSV() {
@@ -351,13 +359,17 @@ function program() {
                 const subArea = vertex.crossProduct(nextVertex);
                 this.centroid = this.centroid.add(vertex.add(nextVertex).scale(subArea));
                 inertiaOrigin +=
-                    subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag());
+                    subArea *
+                        (vertex.getSqMag() +
+                            vertex.dotProduct(nextVertex) +
+                            nextVertex.getSqMag());
                 this.rotatedVertices[index] = new Vector(vertex.x * cosT - vertex.y * sinT, vertex.x * sinT + vertex.y * cosT);
             });
             this.mass = this.area * this.rho;
             this.cachedCentroid = this.centroid.copy();
             inertiaOrigin *= this.rho / 12;
-            this.momentOfInertia = inertiaOrigin - this.mass * this.centroid.getSqMag();
+            this.momentOfInertia =
+                inertiaOrigin - this.mass * this.centroid.getSqMag();
             let maxSqRadius = -Infinity;
             this.vertices.forEach((vertex, index, vertices) => {
                 const nextVertex = vertices[(index + 1) % vertices.length];
@@ -378,7 +390,8 @@ function program() {
         shallowUpdate(base) {
             this.lastUpdate = "AABB";
             // check if rotation recalc neccessary
-            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            if (base.dir !== this.cachedDir &&
+                this.cachedCentroid.x + this.cachedCentroid.y !== 0)
                 this.centroid.rotate(base.dir);
             if (!displayAABB)
                 return;
@@ -396,11 +409,11 @@ function program() {
             if (this.lastUpdate !== "AABB")
                 return;
             this.lastUpdate = "SAT";
-            this.transformedVertices = this.vertices.map((vertex) => vertex.rotate(base.dir).add(base.position));
-            this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir));
+            this.transformedVertices = this.vertices.map(vertex => vertex.rotate(base.dir).add(base.position));
+            this.normals = this.cachedNormals.map(cachedNormal => cachedNormal.rotate(base.dir));
         }
         project(axis) {
-            const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis));
+            const projections = this.transformedVertices.map(vertex => vertex.dotProduct(axis));
             return { min: Math.min(...projections), max: Math.max(...projections) };
         }
         closestPointToCentroidOf(base) {
@@ -460,7 +473,8 @@ function program() {
         shallowUpdate(base) {
             this.lastUpdate = "AABB";
             // check if rotation recalc neccessary
-            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            if (base.dir !== this.cachedDir &&
+                this.cachedCentroid.x + this.cachedCentroid.y !== 0)
                 this.centroid.rotate(base.dir);
             if (!displayAABB)
                 return;
@@ -546,10 +560,6 @@ function program() {
             const input_y = (keys[DOWN] || keys[83]) - (keys[UP] || keys[87]);
             const input_dir = keys[69] - keys[81];
             const translation = new Vector(input_x, input_y).normalize();
-            /*
-            this.position.add(translation);
-            this.dir += input_dir / 20;
-            */
             if (this.velocity.getMag() < 3)
                 this.velocity = this.velocity.add(translation.divide(5));
             else
@@ -569,10 +579,15 @@ function program() {
             else
                 this.velocity = new Vector(0, 0);
             if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
-                this.position.x = -Math.sign(this.position.x) * (canvasHalfWidth + this.hitbox.aabb.width / 2);
+                this.position.x =
+                    -Math.sign(this.position.x) *
+                        (canvasHalfWidth + this.hitbox.aabb.width / 2);
             }
-            if (abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
-                this.position.y = -Math.sign(this.position.y) * (canvasHalfHeight + this.hitbox.aabb.width / 2);
+            if (abs(this.position.y) >
+                canvasHalfHeight + this.hitbox.aabb.height / 2) {
+                this.position.y =
+                    -Math.sign(this.position.y) *
+                        (canvasHalfHeight + this.hitbox.aabb.width / 2);
             }
             if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
                 this.velocity = new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag");
@@ -605,7 +620,8 @@ function program() {
                 this.axesBuffer.push(normal);
             let axes = this.axesBuffer;
             // Circle-Circle test
-            if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
+            if (baseA.hitbox.type === baseB.hitbox.type &&
+                baseA.hitbox.type === "Circle") {
                 const sqDistance = baseA.hitbox.centroid
                     .add(baseA.position)
                     .subtract(baseB.hitbox.centroid.add(baseB.position))
@@ -623,7 +639,7 @@ function program() {
                         overlap: overlap,
                         MTV: normal.scale(overlap),
                         baseA: baseA,
-                        baseB: baseB
+                        baseB: baseB,
                     };
                 }
             }
@@ -677,7 +693,7 @@ function program() {
                 axis: minNormal,
                 overlap: minOverlap,
                 baseA: baseA,
-                baseB: baseB
+                baseB: baseB,
             };
         }
         handleCollision(data) {
@@ -698,7 +714,7 @@ function program() {
             const collisionType = baseA.hitbox.type + "-" + baseB.hitbox.type;
             if (collisionType === "Polygon-Polygon") {
                 /* Visualization:
-                 * A is the checked vertex. BC is the current edge of the other base. P is the closest point
+                   A is the checked vertex. BC is the current edge of the other base. P is the closest point
                       /B
                      / |
                     /  |
@@ -713,7 +729,7 @@ function program() {
                     const vertices = base.hitbox.transformedVertices;
                     const otherVertices = otherBase.hitbox.transformedVertices;
                     // vertex loop
-                    vertices.forEach((vertexA) => {
+                    vertices.forEach(vertexA => {
                         // side loop
                         otherVertices.forEach((vertexB, index, bVertices) => {
                             const vertexC = bVertices[(index + 1) % bVertices.length];
@@ -738,7 +754,8 @@ function program() {
                 if (contactPoints.length === 0)
                     contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB));
             }
-            else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
+            else if (collisionType === "Polygon-Circle" ||
+                collisionType === "Circle-Polygon") {
                 let circleBase, otherBase;
                 if (baseA.hitbox.type === "Circle")
                     [circleBase, otherBase] = [baseA, baseB];
@@ -747,7 +764,9 @@ function program() {
                 contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase));
             }
             else if (collisionType === "Circle-Circle") {
-                const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize();
+                const centroidAToCentroidB = baseB.position
+                    .subtract(baseA.position)
+                    .normalize();
                 contactPoints.push(baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius)));
             }
             for (const point of contactPoints) {
@@ -766,9 +785,7 @@ function program() {
                 const velocityAB = contactVelocityB.subtract(contactVelocityA);
                 const inertiaA = baseA.hitbox.momentOfInertia;
                 const inertiaB = baseB.hitbox.momentOfInertia;
-                const impulseScalar = velocityAB
-                    .scale(-1 - restitution)
-                    .dotProduct(axis) /
+                const impulseScalar = velocityAB.scale(-1 - restitution).dotProduct(axis) /
                     (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +
                         sq(vectorAC.crossProduct(axis)) / inertiaA +
                         sq(vectorBC.crossProduct(axis)) / inertiaB);
@@ -792,13 +809,7 @@ function program() {
         boxes.push(new Base(new Vector(random(-canvasHalfWidth, canvasHalfWidth), random(-canvasHalfHeight, canvasHalfHeight)), random(0, 2 * PI), shape));
     }
     if (insertCount === 0)
-        boxes.push(new Base(new Vector(-100, 0), 0, new Circle(new Vector(0, 0), 20, new Color([255, 0, 0])), new Vector(1, 0)
-        //shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
-        ), new Base(new Vector(100, 0), 0, new Circle(new Vector(0, 0), 100, new Color([255, 0, 0]))
-        //shape: newPolygon(regularPolyVerts(0, 0, 55, 5), new Color(255, 0, 0))
-        ), new Base(new Vector(0, -100), 0, 
-        // shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
-        new Circle(new Vector(0, 0), 35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
+        boxes.push(new Base(new Vector(-100, 0), 0, new Circle(new Vector(0, 0), 20, new Color([255, 0, 0])), new Vector(1, 0)), new Base(new Vector(100, 0), 0, new Circle(new Vector(0, 0), 100, new Color([255, 0, 0]))), new Base(new Vector(0, -100), 0, new Circle(new Vector(0, 0), 35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
     const displayPeriod = 60;
     class Performance {
         metrics;
@@ -827,7 +838,10 @@ function program() {
             if (key !== "total")
                 percentage = (average / this.metrics.total.savedData.average) * 100;
             return {
-                min: min(buffer), max: max(buffer), average: average, percentage: percentage
+                min: min(buffer),
+                max: max(buffer),
+                average: average,
+                percentage: percentage,
             };
         }
         // for next frame
@@ -883,13 +897,12 @@ function program() {
         Perf.getTime();
         if (keys[32] && ticksSinceInput >= 30) {
             focus = (focus + 1) % boxes.length;
-            //for (const box of boxes)
-            // box.velocity.add(new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag"));
             ticksSinceInput = 0;
         }
         for (const box of boxes) {
             KE +=
-                (box.hitbox.mass * box.velocity.getSqMag()) / 2 + (box.hitbox.momentOfInertia * sq(box.omega)) / 2;
+                (box.hitbox.mass * box.velocity.getSqMag()) / 2 +
+                    (box.hitbox.momentOfInertia * sq(box.omega)) / 2;
             box.update();
             Perf.updateMetric("boxUpdate");
             if (focus === box.id)
@@ -911,7 +924,9 @@ function program() {
                 if (client.id === box.id)
                     continue;
                 // skip duplicate collision checks
-                const formattedCollision = box.id < client.id ? box.id + "," + client.id : client.id + "," + box.id;
+                const formattedCollision = box.id < client.id
+                    ? box.id + "," + client.id
+                    : client.id + "," + box.id;
                 if (collisionSet.has(formattedCollision))
                     continue;
                 collisionSet.add(formattedCollision);
@@ -966,7 +981,7 @@ function program() {
         }
         Perf.updateMetric("handleCollisions");
         Perf.getTotal();
-        const totalCells = (canvasHalfWidth * 2) * (canvasHalfHeight * 2) / gridSize ** 2;
+        const totalCells = (canvasHalfWidth * 2 * (canvasHalfHeight * 2)) / gridSize ** 2;
         const countMetrics = [
             "Cells Filled",
             world.grid.size + " / " + totalCells,
@@ -979,7 +994,7 @@ function program() {
             "Collision Count",
             collisions.length,
             "Kinetic Energy",
-            KE.toFixed(3)
+            KE.toFixed(3),
         ];
         textAlign(LEFT, TOP);
         textFont(fontBold, 24);
@@ -993,11 +1008,18 @@ function program() {
         const initialRowGap = 16;
         const rowGap = 0;
         const start = margin + padding;
-        const metricDisplayWidth = padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding;
+        const metricDisplayWidth = padding +
+            keyWidth +
+            dataToDisplay.length * (dataWidth + columnGap) +
+            padding;
         fill(0, 0, 0, 120);
         pushMatrix();
         const metricCount = Object.keys(Perf.metrics).length;
-        rect(margin, margin, metricDisplayWidth, padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding);
+        rect(margin, margin, metricDisplayWidth, padding +
+            (metricCount + 1) * rowHeight +
+            metricCount * rowGap +
+            initialRowGap +
+            padding);
         fill(255, 255, 255);
         if (ticks % displayPeriod === 0) {
             const totalData = Perf.getMetricData("total");
@@ -1046,7 +1068,9 @@ function program() {
             for (const dataKey of dataToDisplay) {
                 let data = metric[dataKey];
                 const unit = dataKey === "percentage" ? "%" : "ms";
-                data = isNaN(data) ? displayPeriod - ticks / dt : `${data.toFixed(3)} ${unit}`;
+                data = isNaN(data)
+                    ? displayPeriod - ticks / dt
+                    : `${data.toFixed(3)} ${unit}`;
                 text(data, ddx, dy);
                 ddx += dataWidth + columnGap;
             }
