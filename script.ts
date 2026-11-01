@@ -402,7 +402,7 @@ function program() {
           const nextVertex = vertices[(index + 1) % vertices.length];
           const subArea = vertex.crossProduct(nextVertex);
 
-          this.centroid = this.centroid.copy().add(vertex.copy().add(nextVertex).scale(subArea));
+          this.centroid = this.centroid.add(vertex.add(nextVertex).scale(subArea));
           inertiaOrigin +=
             subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag());
 
@@ -419,11 +419,11 @@ function program() {
         let maxSqRadius = -Infinity;
         this.vertices.forEach((vertex, index, vertices) => {
           const nextVertex = vertices[(index + 1) % vertices.length];
-          const edge = nextVertex.copy().subtract(vertex);
-          let normal = edge.copy().perpendicular().normalize();
+          const edge = nextVertex.subtract(vertex);
+          let normal = edge.perpendicular().normalize();
 
-          const direction = this.cachedCentroid.copy().subtract(normal);
-          maxSqRadius = max(vertex.copy().subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
+          const direction = this.cachedCentroid.subtract(normal);
+          maxSqRadius = max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
           if (normal.dotProduct(direction) < 0) normal = normal.negate();
           this.cachedNormals[index] = normal.normalize();
           this.normals[index] = this.cachedNormals[index].copy();
@@ -477,13 +477,13 @@ function program() {
       this.lastUpdate = "SAT";
 
       this.transformedVertices = this.vertices.map((vertex) =>
-        vertex.copy().rotate(base.dir).add(base.position)
+        vertex.rotate(base.dir).add(base.position)
       );
-      this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.copy().rotate(base.dir));
+      this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir));
     }
     project(axis: Vector, base: Base): { min: number; max: number } {
       if (this.type === "Circle") {
-        const centroid = this.centroid.copy().add(base.position);
+        const centroid = this.centroid.add(base.position);
         const projection = axis.dotProduct(centroid);
         return { min: projection - this.radius, max: projection + this.radius };
       } else {
@@ -494,19 +494,19 @@ function program() {
     closestPointToCentroidOf(base: Base): Vector {
       let closestPoint = new Vector(0, 0);
       let minDistanceSquared = Infinity;
-      const centroid = base.position.copy().add(base.hitbox.centroid);
+      const centroid = base.position.add(base.hitbox.centroid);
       // loop over this object's edges
       this.transformedVertices.forEach((vertexA: Vector, index: number, vertices: Vector[]) => {
         const vertexB = vertices[(index + 1) % vertices.length];
 
         // get closest point on side
-        const sideAB = vertexB.copy().subtract(vertexA);
-        const sideACentroid = centroid.copy().subtract(vertexA);
+        const sideAB = vertexB.subtract(vertexA);
+        const sideACentroid = centroid.subtract(vertexA);
         let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag();
         projection = constrain(projection, 0, 1);
 
-        const point = vertexA.copy().add(sideAB.copy().scale(projection));
-        const difference = point.copy().subtract(centroid);
+        const point = vertexA.add(sideAB.scale(projection));
+        const difference = point.subtract(centroid);
         const distanceSquared = difference.getSqMag();
         if (distanceSquared < minDistanceSquared) {
           minDistanceSquared = distanceSquared;
@@ -563,18 +563,18 @@ function program() {
       this.position.add(translation);
       this.dir += input_dir / 20;
       */
-      if (this.velocity.getMag() < 3) this.velocity = this.velocity.copy().add(translation.divide(5));
+      if (this.velocity.getMag() < 3) this.velocity = this.velocity.add(translation.divide(5));
       else this.velocity = this.velocity.normalize().scale(2.9);
       if (abs(this.omega) < 0.1) this.omega += input_dir / 100;
       else this.omega = Math.sign(this.omega) * 0.09;
     }
     update() {
       this.ticks++;
-      this.position = this.position.copy().add(this.velocity.copy().scale(dt));
+      this.position = this.position.add(this.velocity.scale(dt));
       this.dir += this.omega * dt;
 
       const velocity = this.velocity.getMag();
-      if (velocity > mu) this.velocity = this.velocity.subtract(this.velocity.copy().scale(mu / velocity));
+      if (velocity > mu) this.velocity = this.velocity.subtract(this.velocity.scale(mu / velocity));
       else this.velocity = new Vector(0, 0);
 
       if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
@@ -602,12 +602,12 @@ function program() {
     checkCollision(otherBase: Base) {
       const baseA = this;
       const baseB = otherBase;
-      const tCentroidA = baseA.hitbox.centroid.copy().add(baseA.position);
-      const tCentroidB = baseB.hitbox.centroid.copy().add(baseB.position);
+      const tCentroidA = baseA.hitbox.centroid.add(baseA.position);
+      const tCentroidB = baseB.hitbox.centroid.add(baseB.position);
 
       this.axesBuffer.length = 0;
       // common seperation axis first
-      this.axesBuffer.push(tCentroidB.copy().subtract(tCentroidA).normalize());
+      this.axesBuffer.push(tCentroidB.subtract(tCentroidA).normalize());
       for (const normal of baseA.hitbox.normals) this.axesBuffer.push(normal);
       for (const normal of baseB.hitbox.normals) this.axesBuffer.push(normal);
 
@@ -615,21 +615,20 @@ function program() {
       // Circle-Circle test
       if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
         const sqDistance = baseA.hitbox.centroid
-          .copy()
           .add(baseA.position)
-          .subtract(baseB.hitbox.centroid.copy().add(baseB.position))
+          .subtract(baseB.hitbox.centroid.add(baseB.position))
           .getSqMag();
         const radiiSum = baseA.hitbox.radius + baseB.hitbox.radius;
         if (sqDistance > sq(radiiSum)) {
           return { colliding: false };
         } else {
           const overlap = sqrt(sqDistance) - radiiSum;
-          const normal = tCentroidA.copy().subtract(tCentroidB).normalize();
+          const normal = tCentroidA.subtract(tCentroidB).normalize();
           return {
             colliding: true,
             axis: normal,
             overlap: overlap,
-            MTV: normal.copy().scale(overlap),
+            MTV: normal.scale(overlap),
             baseA: baseA,
             baseB: baseB
           };
@@ -661,10 +660,10 @@ function program() {
         let circleBase, otherBase;
         if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB];
         else[circleBase, otherBase] = [baseB, baseA];
-        const centroid = circleBase.position.copy().add(circleBase.hitbox.centroid);
+        const centroid = circleBase.position.add(circleBase.hitbox.centroid);
 
         const closestPoint = otherBase.hitbox.closestPointToCentroidOf(circleBase);
-        const axis = closestPoint.copy().subtract(centroid).normalize();
+        const axis = closestPoint.subtract(centroid).normalize();
 
         // project each hitbox's vertices
         const projA = baseA.hitbox.project(axis, baseA);
@@ -681,7 +680,7 @@ function program() {
       }
 
       // reorient axis when neccessary
-      const direction = tCentroidB.copy().subtract(tCentroidA);
+      const direction = tCentroidB.subtract(tCentroidA);
       const dotProd = minNormal.x * direction.x + minNormal.y * direction.y;
       if (dotProd < 0) minNormal = minNormal.negate()
 
@@ -696,7 +695,7 @@ function program() {
     handleCollision(data: { colliding: boolean; axis: Vector; overlap: number; baseA: Base; baseB: Base }) {
       if (!data.colliding) return;
       const axis = data.axis;
-      const MTV = data.axis.copy().scale(data.overlap);
+      const MTV = data.axis.scale(data.overlap);
       const baseB = data.baseB;
       const baseA = data.baseA;
       const bases = [baseA, baseB];
@@ -704,10 +703,10 @@ function program() {
       const massA = baseA.hitbox.mass,
         massB = baseB.hitbox.mass;
 
-      const displacementA = MTV.copy().scale(massB / (massA + massB));
-      const displacementB = MTV.copy().scale(massA / (massA + massB));
-      baseA.position = baseA.position.copy().subtract(displacementA);
-      baseB.position = baseB.position.copy().add(displacementB);
+      const displacementA = MTV.scale(massB / (massA + massB));
+      const displacementB = MTV.scale(massA / (massA + massB));
+      baseA.position = baseA.position.subtract(displacementA);
+      baseB.position = baseB.position.add(displacementB);
       // get contact points
       let contactPoints: Vector[] = [];
       const collisionType = baseA.hitbox.type + "-" + baseB.hitbox.type;
@@ -733,18 +732,18 @@ function program() {
             // side loop
             otherVertices.forEach((vertexB, index, bVertices) => {
               const vertexC = bVertices[(index + 1) % bVertices.length];
-              const sideBC = vertexC.copy().subtract(vertexB);
-              const sideBA = vertexA.copy().subtract(vertexB);
+              const sideBC = vertexC.subtract(vertexB);
+              const sideBA = vertexA.subtract(vertexB);
 
               let projection = sideBA.dotProduct(sideBC) / sideBC.getSqMag();
               projection = constrain(projection, 0, 1);
 
-              const point = vertexB.copy().add(sideBC.copy().scale(projection));
-              const sideAP = point.copy().subtract(vertexA);
+              const point = vertexB.add(sideBC.scale(projection));
+              const sideAP = point.subtract(vertexA);
               const distanceSquared = sideAP.getSqMag();
               if (distanceSquared < 1 && contactPoints.length < 2) {
                 if (contactPoints.length === 1) {
-                  if (contactPoints[0].copy().subtract(point).getSqMag() > 0.01) contactPoints.push(point);
+                  if (contactPoints[0].subtract(point).getSqMag() > 0.01) contactPoints.push(point);
                 } else contactPoints.push(point);
               }
             });
@@ -757,9 +756,9 @@ function program() {
         else[circleBase, otherBase] = [baseB, baseA];
         contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase));
       } else if (collisionType === "Circle-Circle") {
-        const centroidAToCentroidB = baseB.position.copy().subtract(baseA.position).normalize();
+        const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize();
         contactPoints.push(
-          baseA.position.copy().add(centroidAToCentroidB.copy().scale(baseA.hitbox.radius))
+          baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius))
         );
       }
 
@@ -772,32 +771,27 @@ function program() {
       if (!collisionImpulse) return;
 
       for (const contactPoint of contactPoints) {
-        const vectorAC = contactPoint.copy().subtract(baseA.position);
-        const vectorBC = contactPoint.copy().subtract(baseB.position);
-        const contactVelocityA = baseA.velocity
-          .copy()
-          .add(vectorAC.copy().perpendicular().scale(baseA.omega));
-        const contactVelocityB = baseB.velocity
-          .copy()
-          .add(vectorBC.copy().perpendicular().scale(baseB.omega));
+        const vectorAC = contactPoint.subtract(baseA.position);
+        const vectorBC = contactPoint.subtract(baseB.position);
+        const contactVelocityA = baseA.velocity.add(vectorAC.perpendicular().scale(baseA.omega));
+        const contactVelocityB = baseB.velocity.add(vectorBC.perpendicular().scale(baseB.omega));
 
-        const velocityAB = contactVelocityB.copy().subtract(contactVelocityA);
+        const velocityAB = contactVelocityB.subtract(contactVelocityA);
 
         const inertiaA = baseA.hitbox.momentOfInertia;
         const inertiaB = baseB.hitbox.momentOfInertia;
         const impulseScalar =
           velocityAB
-            .copy()
             .scale(-1 - restitution)
             .dotProduct(axis) /
-          (axis.dotProduct(axis.copy().scale(1 / massA + 1 / massB)) +
+          (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +
             sq(vectorAC.crossProduct(axis)) / inertiaA +
             sq(vectorBC.crossProduct(axis)) / inertiaB);
 
-        baseA.velocity = baseA.velocity.copy().subtract(axis.copy().scale(impulseScalar / massA));
+        baseA.velocity = baseA.velocity.subtract(axis.scale(impulseScalar / massA));
         baseA.omega += (vectorAC.crossProduct(axis) * impulseScalar) / inertiaA;
 
-        baseB.velocity = baseB.velocity.copy().add(axis.copy().scale(impulseScalar / massB));
+        baseB.velocity = baseB.velocity.add(axis.scale(impulseScalar / massB));
         baseB.omega -= (vectorBC.crossProduct(axis) * impulseScalar) / inertiaB;
       }
     }
@@ -982,7 +976,7 @@ function program() {
     for (const box of boxes) {
       const aabb = box.hitbox.aabb;
       Perf.getTime();
-      const clients = world.queryGrid(box.position.copy().add(aabb.centroid), aabb.width, aabb.height);
+      const clients = world.queryGrid(box.position.add(aabb.centroid), aabb.width, aabb.height);
       Perf.updateMetric("gridQuery");
 
       for (const client of clients) {
@@ -995,9 +989,8 @@ function program() {
         collisionSet.add(formattedCollision);
         // quick radii check
         const sqDistance = box.hitbox.centroid
-          .copy()
           .add(box.position)
-          .subtract(client.hitbox.centroid.copy().add(client.position))
+          .subtract(client.hitbox.centroid.add(client.position))
           .getSqMag();
         const radiiSum = box.hitbox.radius + client.hitbox.radius;
         if (sqDistance > sq(radiiSum)) continue;
