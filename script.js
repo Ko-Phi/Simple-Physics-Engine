@@ -34,93 +34,26 @@ function program() {
     var keys = Array(100).fill(false);
     keyPressed = () => (keys[keyCode] = true);
     keyReleased = () => (keys[keyCode] = false);
-    // componentInit: x, y
-    // dirMagInit: dir, mag
     class Vector {
         x;
         y;
-        constructor(input1, input2, init) {
-            let [x, y] = [input1, input2];
-            if (init === "dirMag")
-                [x, y] = [input2 * Math.cos(input1), input2 * Math.sin(input1)];
-            [this.x, this.y] = [x, y];
+        constructor(input1, input2, init = "component") {
+            [this.x, this.y] = init === "component" ? [input1, input2] : [input2 * Math.cos(input1), input2 * Math.sin(input1)];
         }
         copy = () => new Vector(this.x, this.y);
         getSqMag = () => sq(this.x) + sq(this.y);
         getMag = () => sqrt(this.getSqMag());
         theta = () => Math.atan2(this.y, this.x);
-        add(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            this.x += vectorX;
-            this.y += vectorY;
-            return this;
-        }
-        subtract(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            this.x -= vectorX;
-            this.y -= vectorY;
-            return this;
-        }
-        multiply(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            this.x *= vectorX;
-            this.y *= vectorY;
-            return this;
-        }
-        divide(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            this.x /= vectorX;
-            this.y /= vectorY;
-            return this;
-        }
-        normalize() {
-            const mag = this.getMag();
-            if (mag === 0)
-                return this;
-            return this.divide(mag);
-        }
-        dotProduct(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            return this.x * vectorX + this.y * vectorY;
-        }
-        crossProduct(vector) {
-            let vectorX, vectorY;
-            if (typeof vector === "number")
-                vectorX = vectorY = vector;
-            else
-                [vectorX, vectorY] = [vector.x, vector.y];
-            return -(this.x * vectorY - this.y * vectorX);
-        }
-        perpendicular() {
-            [this.x, this.y] = [-this.y, this.x];
-            return this;
-        }
-        rotate(dir) {
-            const cosT = Math.cos(dir);
-            const sinT = Math.sin(dir);
-            [this.x, this.y] = [this.x * cosT - this.y * sinT, this.x * sinT + this.y * cosT];
-            return this;
-        }
+        add = (v) => new Vector(this.x + v.x, this.y + v.y);
+        negate = () => new Vector(-this.x, -this.y);
+        subtract = (v) => this.add(v.negate());
+        scale = (c) => new Vector(this.x * c, this.y * c);
+        divide = (c) => this.scale(1 / c);
+        normalize = () => (r => r !== 0 ? this.divide(r) : this.copy())(this.getMag()); // I miss u haskell </3
+        dotProduct = (v) => this.x * v.x + this.y * v.y;
+        crossProduct = (v) => -(this.x * v.y - this.y * v.x); // As world is inverted-cartesian
+        perpendicular = () => new Vector(-this.y, this.x);
+        rotate = (θ) => new Vector(this.x * Math.cos(θ) - this.y * Math.sin(θ), this.x * Math.sin(θ) + this.y * Math.cos(θ));
         display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
         equalTo = (vector) => this.x === vector.x && this.y === vector.y;
     }
@@ -446,7 +379,7 @@ function program() {
                 loopedVertices.forEach((vertex, index, vertices) => {
                     const nextVertex = vertices[(index + 1) % vertices.length];
                     const subArea = vertex.crossProduct(nextVertex);
-                    this.centroid.add(vertex.copy().add(nextVertex).multiply(subArea));
+                    this.centroid = this.centroid.copy().add(vertex.copy().add(nextVertex).scale(subArea));
                     inertiaOrigin +=
                         subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag());
                     this.rotatedVertices[index] = new Vector(vertex.x * cosT - vertex.y * sinT, vertex.x * sinT + vertex.y * cosT);
@@ -463,7 +396,7 @@ function program() {
                     const direction = this.cachedCentroid.copy().subtract(normal);
                     maxSqRadius = max(vertex.copy().subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
                     if (normal.dotProduct(direction) < 0)
-                        normal.multiply(-1);
+                        normal = normal.negate();
                     this.cachedNormals[index] = normal.normalize();
                     this.normals[index] = this.cachedNormals[index].copy();
                 });
@@ -492,9 +425,8 @@ function program() {
         shallowUpdate(base) {
             this.lastUpdate = "AABB";
             // check if rotation recalc neccessary
-            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0) {
+            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
                 this.centroid.rotate(base.dir);
-            }
             if (!displayAABB)
                 return;
             // display AABB (note aabb centroid points to base centroid)
@@ -537,7 +469,7 @@ function program() {
                 const sideACentroid = centroid.copy().subtract(vertexA);
                 let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag();
                 projection = constrain(projection, 0, 1);
-                const point = vertexA.copy().add(sideAB.copy().multiply(projection));
+                const point = vertexA.copy().add(sideAB.copy().scale(projection));
                 const difference = point.copy().subtract(centroid);
                 const distanceSquared = difference.getSqMag();
                 if (distanceSquared < minDistanceSquared) {
@@ -591,9 +523,9 @@ function program() {
             this.dir += input_dir / 20;
             */
             if (this.velocity.getMag() < 3)
-                this.velocity.add(translation.divide(5));
+                this.velocity = this.velocity.copy().add(translation.divide(5));
             else
-                this.velocity.normalize().multiply(2.9);
+                this.velocity = this.velocity.normalize().scale(2.9);
             if (abs(this.omega) < 0.1)
                 this.omega += input_dir / 100;
             else
@@ -601,11 +533,11 @@ function program() {
         }
         update() {
             this.ticks++;
-            this.position.add(this.velocity.copy().multiply(dt));
+            this.position = this.position.copy().add(this.velocity.copy().scale(dt));
             this.dir += this.omega * dt;
             const velocity = this.velocity.getMag();
             if (velocity > mu)
-                this.velocity.subtract(this.velocity.copy().multiply(mu / velocity));
+                this.velocity = this.velocity.subtract(this.velocity.copy().scale(mu / velocity));
             else
                 this.velocity = new Vector(0, 0);
             if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
@@ -662,7 +594,7 @@ function program() {
                         colliding: true,
                         axis: normal,
                         overlap: overlap,
-                        MTV: normal.copy().multiply(overlap),
+                        MTV: normal.copy().scale(overlap),
                         baseA: baseA,
                         baseB: baseB
                     };
@@ -712,7 +644,7 @@ function program() {
             const direction = tCentroidB.copy().subtract(tCentroidA);
             const dotProd = minNormal.x * direction.x + minNormal.y * direction.y;
             if (dotProd < 0)
-                minNormal.multiply(-1);
+                minNormal = minNormal.negate();
             return {
                 colliding: true,
                 axis: minNormal,
@@ -725,15 +657,15 @@ function program() {
             if (!data.colliding)
                 return;
             const axis = data.axis;
-            const MTV = data.axis.copy().multiply(data.overlap);
+            const MTV = data.axis.copy().scale(data.overlap);
             const baseB = data.baseB;
             const baseA = data.baseA;
             const bases = [baseA, baseB];
             const massA = baseA.hitbox.mass, massB = baseB.hitbox.mass;
-            const displacementA = MTV.copy().multiply(massB / (massA + massB));
-            const displacementB = MTV.copy().multiply(massA / (massA + massB));
-            baseA.position.subtract(displacementA);
-            baseB.position.add(displacementB);
+            const displacementA = MTV.copy().scale(massB / (massA + massB));
+            const displacementB = MTV.copy().scale(massA / (massA + massB));
+            baseA.position = baseA.position.copy().subtract(displacementA);
+            baseB.position = baseB.position.copy().add(displacementB);
             // get contact points
             let contactPoints = [];
             const collisionType = baseA.hitbox.type + "-" + baseB.hitbox.type;
@@ -762,7 +694,7 @@ function program() {
                             const sideBA = vertexA.copy().subtract(vertexB);
                             let projection = sideBA.dotProduct(sideBC) / sideBC.getSqMag();
                             projection = constrain(projection, 0, 1);
-                            const point = vertexB.copy().add(sideBC.copy().multiply(projection));
+                            const point = vertexB.copy().add(sideBC.copy().scale(projection));
                             const sideAP = point.copy().subtract(vertexA);
                             const distanceSquared = sideAP.getSqMag();
                             if (distanceSquared < 1 && contactPoints.length < 2) {
@@ -789,7 +721,7 @@ function program() {
             }
             else if (collisionType === "Circle-Circle") {
                 const centroidAToCentroidB = baseB.position.copy().subtract(baseA.position).normalize();
-                contactPoints.push(baseA.position.copy().add(centroidAToCentroidB.copy().multiply(baseA.hitbox.radius)));
+                contactPoints.push(baseA.position.copy().add(centroidAToCentroidB.copy().scale(baseA.hitbox.radius)));
             }
             for (const point of contactPoints) {
                 pushMatrix();
@@ -804,23 +736,23 @@ function program() {
                 const vectorBC = contactPoint.copy().subtract(baseB.position);
                 const contactVelocityA = baseA.velocity
                     .copy()
-                    .add(vectorAC.copy().perpendicular().multiply(baseA.omega));
+                    .add(vectorAC.copy().perpendicular().scale(baseA.omega));
                 const contactVelocityB = baseB.velocity
                     .copy()
-                    .add(vectorBC.copy().perpendicular().multiply(baseB.omega));
+                    .add(vectorBC.copy().perpendicular().scale(baseB.omega));
                 const velocityAB = contactVelocityB.copy().subtract(contactVelocityA);
                 const inertiaA = baseA.hitbox.momentOfInertia;
                 const inertiaB = baseB.hitbox.momentOfInertia;
                 const impulseScalar = velocityAB
                     .copy()
-                    .multiply(-1 - restitution)
+                    .scale(-1 - restitution)
                     .dotProduct(axis) /
-                    (axis.dotProduct(axis.copy().multiply(1 / massA + 1 / massB)) +
+                    (axis.dotProduct(axis.copy().scale(1 / massA + 1 / massB)) +
                         sq(vectorAC.crossProduct(axis)) / inertiaA +
                         sq(vectorBC.crossProduct(axis)) / inertiaB);
-                baseA.velocity.subtract(axis.copy().multiply(impulseScalar / massA));
+                baseA.velocity = baseA.velocity.copy().subtract(axis.copy().scale(impulseScalar / massA));
                 baseA.omega += (vectorAC.crossProduct(axis) * impulseScalar) / inertiaA;
-                baseB.velocity.add(axis.copy().multiply(impulseScalar / massB));
+                baseB.velocity = baseB.velocity.copy().add(axis.copy().scale(impulseScalar / massB));
                 baseB.omega -= (vectorBC.crossProduct(axis) * impulseScalar) / inertiaB;
             }
         }
