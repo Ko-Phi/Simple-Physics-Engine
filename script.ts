@@ -28,7 +28,7 @@ function program() {
   const FPS = insertCount >= 750 ? 30 : 60;
   const drawAsCircles = false; // shapes drawn as circles. Increases performance
   const displayAABB = false; // aabbs drawn. Uses rect() so not very good for performance
-  const displayGridCheck = false; // checked grids are highlighted. Very performance intensive
+  const displayGridCheck = true; // checked grids are highlighted. Very performance intensive
   const sameColor = false; // shapes drawn with the same color. Minor performance gain
 
   angleMode = "radians";
@@ -146,14 +146,9 @@ function program() {
       this.cellSize = cellSize;
       this.queryIds = 0;
     }
-    key(x: number, y: number): string {
-      return x + "," + y;
-    }
-    getCellIndex(x: number, y: number): Vector {
-      const xIndex = floor(x / this.cellSize);
-      const yIndex = floor(y / this.cellSize);
-      return new Vector(xIndex, yIndex);
-    }
+    key = (x: number, y: number): string => x + "," + y;
+    getIndex = (x: number, y: number): Vector =>
+      new Vector(...[x, y].map(c => Math.floor(c / this.cellSize)) as [number, number]);
     newClient(client: Base) {
       client.indices = [];
       this.insert(client);
@@ -163,30 +158,29 @@ function program() {
     insert(client: Base) {
       const x = client.position.x + client.hitbox.aabb.centroid.x;
       const y = client.position.y + client.hitbox.aabb.centroid.y;
-      const width = client.hitbox.aabb.width;
-      const height = client.hitbox.aabb.width;
+      const w = client.hitbox.aabb.width;
+      const h = client.hitbox.aabb.height;
 
       // get the client's span
-      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
-      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
-      client.indices = [index1, index2];
+      const i1 = this.getIndex(x - w / 2, y - h / 2);
+      const i2 = this.getIndex(x + w / 2, y + h / 2);
+      client.indices = [i1, i2];
 
       // iterate over span, adding client to each cell
-      for (let x = index1.x; x <= index2.x; ++x) {
-        for (let y = index1.y; y <= index2.y; ++y) {
+      for (let x = i1.x; x <= i2.x; ++x) {
+        for (let y = i1.y; y <= i2.y; ++y) {
           const key = this.key(x, y);
           if (!this.grid.has(key)) this.grid.set(key, new Set());
           this.grid.get(key).add(client);
         }
       }
     }
-    queryGrid(position: Vector, width: number, height: number) {
-      const x = position.x;
-      const y = position.y;
+    queryGrid(position: Vector, w: number, h: number) {
+      const [x, y] = [position.x, position.y];
 
       // get span of checked area
-      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
-      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
+      const i1 = this.getIndex(x - w / 2, y - h / 2);
+      const i2 = this.getIndex(x + w / 2, y + h / 2);
 
       // iterate over spanned area for clients
       if (displayGridCheck) {
@@ -197,8 +191,8 @@ function program() {
       }
       let clients = [];
       const queryId = this.queryIds++;
-      for (let x = index1.x; x <= index2.x; ++x) {
-        for (let y = index1.y; y <= index2.y; ++y) {
+      for (let x = i1.x; x <= i2.x; ++x) {
+        for (let y = i1.y; y <= i2.y; ++y) {
           let key = this.key(x, y);
           if (!this.grid.has(key)) continue;
           for (const client of this.grid.get(key)) {
@@ -215,11 +209,11 @@ function program() {
       return clients;
     }
     remove(client: Base) {
-      const index1 = client.indices[0];
-      const index2 = client.indices[1];
+      const i1 = client.indices[0];
+      const i2 = client.indices[1];
       // iterate over client's span, removing it from each cell
-      for (let x = index1.x; x <= index2.x; ++x) {
-        for (let y = index1.y; y <= index2.y; ++y) {
+      for (let x = i1.x; x <= i2.x; ++x) {
+        for (let y = i1.y; y <= i2.y; ++y) {
           const key = this.key(x, y);
           const cell = this.grid.get(key);
           cell.delete(client);
@@ -230,14 +224,14 @@ function program() {
     update(client: Base) {
       const x = client.position.x + client.hitbox.aabb.centroid.x;
       const y = client.position.y + client.hitbox.aabb.centroid.y;
-      const width = client.hitbox.aabb.width;
-      const height = client.hitbox.aabb.width;
+      const w = client.hitbox.aabb.width;
+      const h = client.hitbox.aabb.height;
 
       // get the client's span
-      const index1 = this.getCellIndex(x - width / 2, y - height / 2);
-      const index2 = this.getCellIndex(x + width / 2, y + height / 2);
+      const i1 = this.getIndex(x - w / 2, y - h / 2);
+      const i2 = this.getIndex(x + w / 2, y + h / 2);
       // check for change in grid position
-      if (!index1.equalTo(client.indices[0]) || !index2.equalTo(client.indices[1])) {
+      if (!i1.equalTo(client.indices[0]) || !i2.equalTo(client.indices[1])) {
         this.remove(client);
         this.insert(client);
       }
