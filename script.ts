@@ -267,62 +267,65 @@ function program() {
     return vertices;
   }
 
-  function newPolygon(vertices: Vector[], color?: Color) {
-    return new Shape("Polygon", color, vertices);
-  }
-  function newCircle(centroid: Vector, radius: number, color?: Color) {
-    return new Shape("Circle", color, undefined, centroid, radius);
+  type ShapeType = "Polygon" | "Circle"
+
+  abstract class AShape {
+    abstract type: ShapeType
+    abstract centroid: Vector
+    abstract radius: number
+    abstract color: Color
+    abstract draw: (x: number, y: number, base: Base) => void
   }
 
-  class Shape {
-    type: "Polygon" | "Circle";
-    vertices: Vector[];
-    color: Color;
-    centroid: Vector;
-    radius: number;
-    constructor(
-      type: "Polygon" | "Circle",
-      color?: Color,
-      vertices?: Vector[],
-      centroid?: Vector,
-      radius?: number
-    ) {
-      this.color = color ?? new Color([0, 0, 0, 0]);
-      this.type = type;
-      if (this.type === "Polygon") {
-        if (vertices === undefined) throw new Error("Polygons require vertices");
-        this.vertices = vertices;
-        let maxSqRadius = -Infinity;
-        this.centroid = this.vertices
-          .reduce(
-            (sum, vertex) => {
-              maxSqRadius = max(vertex.getSqMag(), maxSqRadius);
-              return sum.add(vertex);
-            },
-            new Vector(0, 0)
-          )
-          .divide(this.vertices.length);
-        this.radius = sqrt(maxSqRadius);
-      } else if (this.type === "Circle") {
-        if (radius === undefined) throw new Error("Circles require a centroid");
-        this.centroid = centroid ?? new Vector(0, 0);
-        this.radius = radius;
-        this.vertices = [this.centroid];
-      } else throw new Error("Type not specified");
+  class Polygon implements AShape {
+    type: ShapeType
+    centroid: Vector
+    color: Color
+    radius: number
+    vertices: Vector[]
+    constructor(vertices: Vector[], color: Color = new Color([0, 0, 0, 0])) {
+      this.type = "Polygon"
+      this.vertices = vertices
+      this.color = color
+      let maxSqRadius = -Infinity;
+      this.centroid = this.vertices
+        .reduce(
+          (sum, vertex) => {
+            maxSqRadius = max(vertex.getSqMag(), maxSqRadius);
+            return sum.add(vertex);
+          },
+          new Vector(0, 0)
+        )
+        .divide(this.vertices.length);
+      this.radius = sqrt(maxSqRadius);
     }
-
-    draw(dx = 0, dy = 0, base: Base) {
+    draw(dx: number, dy: number, base: Base) {
       if (!sameColor) fill(this.color.cachedValue);
-      if (this.type === "Polygon") {
-        beginShape();
-        for (const vert of this.vertices) vertex(vert.x + dx, vert.y + dy);
-        endShape(CLOSE);
-      } else if (this.type === "Circle") {
-        ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2);
-        line(this.centroid.x, this.centroid.y, this.radius * cos(base.dir), this.radius * sin(base.dir));
-      }
+      beginShape();
+      for (const vert of this.vertices) vertex(vert.x + dx, vert.y + dy);
+      endShape(CLOSE);
     }
   }
+
+  class Circle implements AShape {
+    type: ShapeType
+    centroid: Vector
+    color: Color
+    radius: number
+    constructor(centroid: Vector, radius: number, color: Color = new Color([0, 0, 0, 0])) {
+      this.type = "Circle"
+      this.centroid = centroid
+      this.radius = radius
+      this.color = color
+    }
+    draw(dx: number, dy: number, base: Base) {
+      if (!sameColor) fill(this.color.cachedValue);
+      ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2);
+      line(this.centroid.x, this.centroid.y, this.radius * cos(base.dir), this.radius * sin(base.dir));
+    }
+  }
+
+  type Shape = Polygon | Circle
 
   class Aabb {
     width: number;
@@ -335,7 +338,31 @@ function program() {
     }
   }
 
-  class Hitbox extends Shape {
+  type WindingOrder = "CW" | "CCW"
+  abstract class AHitbox {
+    abstract normals: Vector[];
+
+    abstract rho: number;
+    abstract aabb: Aabb;
+    abstract area: number;
+    abstract mass: number;
+    abstract momentOfInertia: number;
+    abstract windingOrder: WindingOrder;
+
+    abstract rotatedVertices: Vector[];
+    abstract transformedVertices: Vector[];
+    abstract cachedDir: number;
+    abstract cachedNormals: Vector[];
+    abstract cachedCentroid: Vector;
+
+    abstract lastUpdate: "None" | "AABB" | "SAT";
+    abstract shallowUpdate: (base: Base) => void
+    abstract narrowUpdate: (base: Base) => void
+    abstract project: (axis: Vector, base: Base) => { min: number; max: number }
+    abstract closestPointToCentroidOf: (base: Base) => Vector
+  }
+
+  class PolygonHitbox extends Polygon implements AHitbox {
     normals: Vector[];
 
     rho: number;
@@ -343,7 +370,7 @@ function program() {
     area: number;
     mass: number;
     momentOfInertia: number;
-    windingOrder: "CW" | "CCW";
+    windingOrder: WindingOrder;
 
     rotatedVertices: Vector[];
     transformedVertices: Vector[];
@@ -351,8 +378,9 @@ function program() {
     lastUpdate: "None" | "AABB" | "SAT";
     cachedNormals: Vector[];
     cachedCentroid: Vector;
-    constructor(shape: Shape, base: Base, rho?: number) {
-      super(shape.type, shape.color, shape.vertices, shape.centroid, shape.radius);
+
+    constructor(shape: Polygon, base: Base, rho?: number) {
+      super(shape.vertices, shape.color);
       this.rotatedVertices = [];
       this.transformedVertices = [];
       this.normals = [];
@@ -361,86 +389,60 @@ function program() {
       this.cachedNormals = [];
 
       this.rho = rho ?? 1;
-      if (this.type === "Circle") {
-        this.area = PI * sq(this.radius);
-        this.mass = this.area * this.rho;
-        this.momentOfInertia = 0.5 * this.mass * sq(this.radius);
+      this.area = this.vertices.reduce((area, vertex, index, vertices) => {
+        const nextVertex = vertices[(index + 1) % vertices.length];
+        return area + vertex.crossProduct(nextVertex);
+      }, 0);
+      if (this.area < 0) this.windingOrder = "CW";
+      else this.windingOrder = "CCW";
+      this.area = abs(this.area) / 2;
+      console.log(this.area, this.windingOrder);
 
-        this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
-        this.cachedCentroid = this.centroid.copy();
-        this.windingOrder = "CW";
-      } else if (this.type === "Polygon") {
-        this.area = this.vertices.reduce((area, vertex, index, vertices) => {
-          const nextVertex = vertices[(index + 1) % vertices.length];
-          return area + vertex.crossProduct(nextVertex);
-        }, 0);
-        if (this.area < 0) this.windingOrder = "CW";
-        else this.windingOrder = "CCW";
-        this.area = abs(this.area) / 2;
-        console.log(this.area, this.windingOrder);
+      let loopedVertices = this.vertices;
+      if (this.windingOrder === "CW") loopedVertices = this.vertices.slice().reverse();
 
-        let loopedVertices = this.vertices;
-        if (this.windingOrder === "CW") loopedVertices = this.vertices.slice().reverse();
+      let inertiaOrigin = 0;
+      this.centroid = new Vector(0, 0);
 
-        let inertiaOrigin = 0;
-        this.centroid = new Vector(0, 0);
+      const cosT = Math.cos(base.dir);
+      const sinT = Math.sin(base.dir);
 
-        const cosT = Math.cos(base.dir);
-        const sinT = Math.sin(base.dir);
+      loopedVertices.forEach((vertex, index, vertices) => {
+        const nextVertex = vertices[(index + 1) % vertices.length];
+        const subArea = vertex.crossProduct(nextVertex);
 
-        loopedVertices.forEach((vertex, index, vertices) => {
-          const nextVertex = vertices[(index + 1) % vertices.length];
-          const subArea = vertex.crossProduct(nextVertex);
+        this.centroid = this.centroid.add(vertex.add(nextVertex).scale(subArea));
+        inertiaOrigin +=
+          subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag());
 
-          this.centroid = this.centroid.add(vertex.add(nextVertex).scale(subArea));
-          inertiaOrigin +=
-            subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag());
+        this.rotatedVertices[index] = new Vector(
+          vertex.x * cosT - vertex.y * sinT,
+          vertex.x * sinT + vertex.y * cosT
+        );
+      });
+      this.mass = this.area * this.rho;
+      this.cachedCentroid = this.centroid.copy();
+      inertiaOrigin *= this.rho / 12;
+      this.momentOfInertia = inertiaOrigin - this.mass * this.centroid.getSqMag();
 
-          this.rotatedVertices[index] = new Vector(
-            vertex.x * cosT - vertex.y * sinT,
-            vertex.x * sinT + vertex.y * cosT
-          );
-        });
-        this.mass = this.area * this.rho;
-        this.cachedCentroid = this.centroid.copy();
-        inertiaOrigin *= this.rho / 12;
-        this.momentOfInertia = inertiaOrigin - this.mass * this.centroid.getSqMag();
+      let maxSqRadius = -Infinity;
+      this.vertices.forEach((vertex, index, vertices) => {
+        const nextVertex = vertices[(index + 1) % vertices.length];
+        const edge = nextVertex.subtract(vertex);
+        let normal = edge.perpendicular().normalize();
 
-        let maxSqRadius = -Infinity;
-        this.vertices.forEach((vertex, index, vertices) => {
-          const nextVertex = vertices[(index + 1) % vertices.length];
-          const edge = nextVertex.subtract(vertex);
-          let normal = edge.perpendicular().normalize();
+        const direction = this.cachedCentroid.subtract(normal);
+        maxSqRadius = max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
+        if (normal.dotProduct(direction) < 0) normal = normal.negate();
+        this.cachedNormals[index] = normal.normalize();
+        this.normals[index] = this.cachedNormals[index].copy();
+      });
 
-          const direction = this.cachedCentroid.subtract(normal);
-          maxSqRadius = max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius);
-          if (normal.dotProduct(direction) < 0) normal = normal.negate();
-          this.cachedNormals[index] = normal.normalize();
-          this.normals[index] = this.cachedNormals[index].copy();
-        });
+      let doubleRadius = 2 * sqrt(maxSqRadius);
+      // Better for more uniform shapes (this scenario)
+      this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
 
-        let doubleRadius = 2 * sqrt(maxSqRadius);
-        // Better for more uniform shapes (this scenario)
-        this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
-      } else throw new Error("Shape type not provided");
       this.shallowUpdate(base);
-    }
-    getCentroid(vertices?: Vector[]) {
-      vertices = vertices ?? this.vertices;
-      return vertices.reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0)).divide(vertices.length);
-    }
-    getArea(vertices?: Vector[]) {
-      vertices = vertices ?? this.vertices;
-      if (this.type === "Circle") return PI * sq(this.radius);
-      // something something shoelaces
-      return (
-        abs(
-          vertices.reduce((area, vertex, index, vertices) => {
-            const nextVertex = vertices[(index + 1) % vertices.length];
-            return area + vertex.crossProduct(nextVertex);
-          }, 0)
-        ) / 2
-      );
     }
     shallowUpdate(base: Base) {
       this.lastUpdate = "AABB";
@@ -463,7 +465,7 @@ function program() {
       ellipse(0, 0, this.radius * 2, this.radius * 2);
     }
     narrowUpdate(base: Base) {
-      if (this.type === "Circle" || this.lastUpdate !== "AABB") return;
+      if (this.lastUpdate !== "AABB") return;
       this.lastUpdate = "SAT";
 
       this.transformedVertices = this.vertices.map((vertex) =>
@@ -471,15 +473,9 @@ function program() {
       );
       this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir));
     }
-    project(axis: Vector, base: Base): { min: number; max: number } {
-      if (this.type === "Circle") {
-        const centroid = this.centroid.add(base.position);
-        const projection = axis.dotProduct(centroid);
-        return { min: projection - this.radius, max: projection + this.radius };
-      } else {
-        const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis));
-        return { min: Math.min(...projections), max: Math.max(...projections) };
-      }
+    project(axis: Vector): { min: number; max: number } {
+      const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis));
+      return { min: Math.min(...projections), max: Math.max(...projections) };
     }
     closestPointToCentroidOf(base: Base): Vector {
       let closestPoint = new Vector(0, 0);
@@ -507,6 +503,100 @@ function program() {
     }
   }
 
+  class CircleHitbox extends Circle implements AHitbox {
+    normals: Vector[];
+
+    rho: number;
+    aabb: Aabb;
+    area: number;
+    mass: number;
+    momentOfInertia: number;
+    windingOrder: WindingOrder;
+
+    rotatedVertices: Vector[];
+    transformedVertices: Vector[];
+    cachedDir: number;
+    lastUpdate: "None" | "AABB" | "SAT";
+    cachedNormals: Vector[];
+    cachedCentroid: Vector;
+
+    constructor(circle: Circle, base: Base, rho?: number) {
+      super(circle.centroid, circle.radius, circle.color);
+      this.rotatedVertices = [];
+      this.transformedVertices = [];
+      this.normals = [];
+      this.cachedDir = 0;
+      this.lastUpdate = "None";
+      this.cachedNormals = [];
+
+      this.rho = rho ?? 1;
+
+      this.area = PI * sq(this.radius);
+      this.mass = this.area * this.rho;
+      this.momentOfInertia = 0.5 * this.mass * sq(this.radius);
+
+      this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
+      this.cachedCentroid = this.centroid.copy();
+      this.windingOrder = "CW";
+
+      this.shallowUpdate(base);
+    }
+    shallowUpdate(base: Base) {
+      this.lastUpdate = "AABB";
+
+      // check if rotation recalc neccessary
+      if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0) this.centroid.rotate(base.dir);
+      if (!displayAABB) return;
+      // display AABB (note aabb centroid points to base centroid)
+      const aabbWidth = this.aabb.width;
+      const aabbHeight = this.aabb.height;
+
+      fill(128, 50);
+      stroke(128, 50);
+      pushMatrix();
+      translate(
+        this.centroid.x + base.position.x + canvasHalfWidth,
+        this.centroid.y + base.position.y + canvasHalfHeight
+      );
+      rect(-aabbWidth / 2, -aabbHeight / 2, aabbWidth, aabbHeight);
+      ellipse(0, 0, this.radius * 2, this.radius * 2);
+    }
+    narrowUpdate() {
+      return;
+    }
+    project(axis: Vector, base: Base): { min: number; max: number } {
+      const centroid = this.centroid.add(base.position);
+      const projection = axis.dotProduct(centroid);
+      return { min: projection - this.radius, max: projection + this.radius };
+    }
+    closestPointToCentroidOf(base: Base): Vector {
+      let closestPoint = new Vector(0, 0);
+      let minDistanceSquared = Infinity;
+      const centroid = base.position.add(base.hitbox.centroid);
+      // loop over this object's edges
+      this.transformedVertices.forEach((vertexA: Vector, index: number, vertices: Vector[]) => {
+        const vertexB = vertices[(index + 1) % vertices.length];
+
+        // get closest point on side
+        const sideAB = vertexB.subtract(vertexA);
+        const sideACentroid = centroid.subtract(vertexA);
+        let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag();
+        projection = constrain(projection, 0, 1);
+
+        const point = vertexA.add(sideAB.scale(projection));
+        const difference = point.subtract(centroid);
+        const distanceSquared = difference.getSqMag();
+        if (distanceSquared < minDistanceSquared) {
+          minDistanceSquared = distanceSquared;
+          closestPoint = point;
+        }
+      });
+      return closestPoint;
+    }
+  }
+
+  type Hitbox = PolygonHitbox | CircleHitbox
+
   // temp
   class Base {
     id: number;
@@ -531,7 +621,9 @@ function program() {
       this.shape = shape;
       this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV");
 
-      this.hitbox = new Hitbox(shape, this);
+      if (shape instanceof Polygon) this.hitbox = new PolygonHitbox(shape, this);
+      else this.hitbox = new CircleHitbox(shape, this);
+
       this.axesBuffer = [];
       if (initialVelocity) {
         this.velocity = new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag");
@@ -791,7 +883,7 @@ function program() {
   for (let i = 0; i < insertCount; i++) {
     let shape =
       (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
-        ? newPolygon(
+        ? new Polygon(
           regularPolyVerts(
             0,
             0,
@@ -800,11 +892,11 @@ function program() {
           ),
           new Color([255, 0, 0])
         )
-        : newCircle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]));
+        : new Circle(new Vector(0, 0), ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]));
     if (random(0, 5) > 4) {
       let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4);
       let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5;
-      shape = newPolygon(
+      shape = new Polygon(
         polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight),
         new Color([255, 0, 0])
       );
@@ -822,27 +914,27 @@ function program() {
       new Base(
         new Vector(-100, 0),
         0,
-        newCircle(new Vector(0, 0), 20, new Color([255, 0, 0])),
+        new Circle(new Vector(0, 0), 20, new Color([255, 0, 0])),
         new Vector(1, 0)
         //shape: newPolygon(regularPolyVerts(0, 0, 35, 4), new Color(255, 0, 0))
       ),
       new Base(
         new Vector(100, 0),
         0,
-        newCircle(new Vector(0, 0), 100, new Color([255, 0, 0]))
+        new Circle(new Vector(0, 0), 100, new Color([255, 0, 0]))
         //shape: newPolygon(regularPolyVerts(0, 0, 55, 5), new Color(255, 0, 0))
       ),
       new Base(
         new Vector(0, -100),
         0,
         // shape: newPolygon(regularPolyVerts(0, 0, 35, 5), new Color(255, 0, 0))
-        newCircle(new Vector(0, 0), 35, new Color([255, 0, 0]))
+        new Circle(new Vector(0, 0), 35, new Color([255, 0, 0]))
       ),
-      new Base(new Vector(0, 100), 1.5, newPolygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))),
+      new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))),
       new Base(
         new Vector(0, 200),
         1.2,
-        newPolygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))
+        new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))
       )
     );
 
