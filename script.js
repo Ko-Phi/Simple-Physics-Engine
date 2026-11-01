@@ -30,7 +30,7 @@ function program() {
     const dt = 60 / FPS;
     const rounD = (num, deciPlace) => round(num * pow(10, deciPlace)) / pow(10, deciPlace);
     const shift = (xs) => xs.slice(1).concat(xs[0]);
-    const zip = (...arrays) => arrays[0].map((_, index) => arrays.map(array => array[index]));
+    const zip = (...arrays) => arrays[0].map((_, index) => arrays.map((array) => array[index]));
     const zipWith = (arr1, arr2, fn) => arr1.map((val, i) => fn(val, arr2[i]));
     const zipShift = (xs) => zip(xs, shift(xs));
     let idCount = 0;
@@ -57,7 +57,7 @@ function program() {
         subtract = (v) => this.add(v.negate());
         scale = (c) => new Vector(this.x * c, this.y * c);
         divide = (c) => this.scale(1 / c);
-        normalize = () => (r => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()); // I miss u haskell </3
+        normalize = () => ((r) => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()); // I miss u haskell </3
         dotProduct = (v) => this.x * v.x + this.y * v.y;
         crossProduct = (v) => -(this.x * v.y - this.y * v.x); // As world is inverted-cartesian
         perpendicular = () => new Vector(-this.y, this.x);
@@ -83,11 +83,7 @@ function program() {
         toRGB() {
             if (this.model === "RGB")
                 return;
-            const [hue, sat, val] = [
-                this.channels[0],
-                this.channels[1],
-                this.channels[2],
-            ];
+            const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]];
             const hueP = hue / 60;
             const chroma = val * sat;
             const x = chroma * (1 - Math.abs((hueP % 2) - 1));
@@ -106,13 +102,13 @@ function program() {
                 [r, g, b] = [chroma, 0, x];
             else
                 throw new Error("RGB undefined");
-            this.channels = [r, g, b].map(c => (c + val - chroma) * 255);
+            this.channels = [r, g, b].map((c) => (c + val - chroma) * 255);
             this.model = "RGB";
         }
         toHSV() {
             if (this.model === "HSV")
                 return;
-            const [rP, gP, bP] = this.channels.slice(0, 3).map(c => c / 255);
+            const [rP, gP, bP] = this.channels.slice(0, 3).map((c) => c / 255);
             const cMax = Math.max(rP, gP, bP);
             const cMin = Math.min(rP, gP, bP);
             const delta = cMax - cMin;
@@ -146,7 +142,7 @@ function program() {
             this.queryIds = 0;
         }
         key = (x, y) => x + "," + y;
-        getIndex = (x, y) => new Vector(...[x, y].map(c => Math.floor(c / this.cellSize)));
+        getIndex = (x, y) => new Vector(...[x, y].map((c) => Math.floor(c / this.cellSize)));
         newClient(client) {
             client.indices = [];
             this.insert(client);
@@ -345,17 +341,19 @@ function program() {
             this.windingOrder = this.area < 0 ? "CW" : "CCW";
             this.area = abs(this.area) / 2;
             this.mass = this.area * this.rho;
-            this.rotatedVertices = this.rotatedVertices.map(v => v.rotate(base.dir));
+            this.rotatedVertices = this.rotatedVertices.map((v) => v.rotate(base.dir));
             const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice();
-            this.momentOfInertia = zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => (subArea => inertia +
-                subArea *
-                    (vertex.getSqMag() +
-                        vertex.dotProduct(nextVertex) +
-                        nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) * (this.rho / 12) - this.mass * this.centroid.getSqMag();
+            this.momentOfInertia =
+                zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => ((subArea) => inertia +
+                    subArea *
+                        (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) *
+                    (this.rho / 12) -
+                    this.mass * this.centroid.getSqMag();
             this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize());
-            this.normals = this.cachedNormals.map(n => n.copy());
+            this.normals = this.cachedNormals.map((n) => n.copy());
             this.cachedCentroid = this.centroid.copy();
-            const doubleRadius = 2 * sqrt(this.vertices.reduce((maxSqRadius, vertex) => max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius), -Infinity));
+            const doubleRadius = 2 *
+                sqrt(this.vertices.reduce((maxSqRadius, vertex) => max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius), -Infinity));
             // Better for more uniform shapes (this scenario)
             this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
             this.shallowUpdate(base);
@@ -363,8 +361,7 @@ function program() {
         shallowUpdate(base) {
             this.lastUpdate = "AABB";
             // check if rotation recalc neccessary
-            if (base.dir !== this.cachedDir &&
-                this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
                 this.centroid.rotate(base.dir);
             if (!displayAABB)
                 return;
@@ -382,12 +379,15 @@ function program() {
             if (this.lastUpdate !== "AABB")
                 return;
             this.lastUpdate = "SAT";
-            this.transformedVertices = this.vertices.map(vertex => vertex.rotate(base.dir).add(base.position));
-            this.normals = this.cachedNormals.map(cachedNormal => cachedNormal.rotate(base.dir));
+            this.transformedVertices = this.vertices.map((vertex) => vertex.rotate(base.dir).add(base.position));
+            this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir));
         }
         project(axis) {
-            const projections = this.transformedVertices.map(vertex => vertex.dotProduct(axis));
-            return { min: Math.min(...projections), max: Math.max(...projections) };
+            const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis));
+            return {
+                min: Math.min(...projections),
+                max: Math.max(...projections),
+            };
         }
         closestPointToCentroidOf(base) {
             let closestPoint = new Vector(0, 0);
@@ -445,8 +445,7 @@ function program() {
         shallowUpdate(base) {
             this.lastUpdate = "AABB";
             // check if rotation recalc neccessary
-            if (base.dir !== this.cachedDir &&
-                this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
                 this.centroid.rotate(base.dir);
             if (!displayAABB)
                 return;
@@ -466,7 +465,10 @@ function program() {
         project(axis, base) {
             const centroid = this.centroid.add(base.position);
             const projection = axis.dotProduct(centroid);
-            return { min: projection - this.radius, max: projection + this.radius };
+            return {
+                min: projection - this.radius,
+                max: projection + this.radius,
+            };
         }
         closestPointToCentroidOf() {
             throw "Uncalleable";
@@ -533,14 +535,11 @@ function program() {
                 this.velocity = new Vector(0, 0);
             if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
                 this.position.x =
-                    -Math.sign(this.position.x) *
-                        (canvasHalfWidth + this.hitbox.aabb.width / 2);
+                    -Math.sign(this.position.x) * (canvasHalfWidth + this.hitbox.aabb.width / 2);
             }
-            if (abs(this.position.y) >
-                canvasHalfHeight + this.hitbox.aabb.height / 2) {
+            if (abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
                 this.position.y =
-                    -Math.sign(this.position.y) *
-                        (canvasHalfHeight + this.hitbox.aabb.width / 2);
+                    -Math.sign(this.position.y) * (canvasHalfHeight + this.hitbox.aabb.width / 2);
             }
             if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
                 this.velocity = new Vector(random(0, 2 * PI), velocityMagnitude * random(0.75, 1.25), "dirMag");
@@ -573,8 +572,7 @@ function program() {
                 this.axesBuffer.push(normal);
             let axes = this.axesBuffer;
             // Circle-Circle test
-            if (baseA.hitbox.type === baseB.hitbox.type &&
-                baseA.hitbox.type === "Circle") {
+            if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
                 const sqDistance = baseA.hitbox.centroid
                     .add(baseA.position)
                     .subtract(baseB.hitbox.centroid.add(baseB.position))
@@ -682,7 +680,7 @@ function program() {
                     const vertices = base.hitbox.transformedVertices;
                     const otherVertices = otherBase.hitbox.transformedVertices;
                     // vertex loop
-                    vertices.forEach(vertexA => {
+                    vertices.forEach((vertexA) => {
                         // side loop
                         otherVertices.forEach((vertexB, index, bVertices) => {
                             const vertexC = bVertices[(index + 1) % bVertices.length];
@@ -707,8 +705,7 @@ function program() {
                 if (contactPoints.length === 0)
                     contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB));
             }
-            else if (collisionType === "Polygon-Circle" ||
-                collisionType === "Circle-Polygon") {
+            else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
                 let circleBase, otherBase;
                 if (baseA.hitbox.type === "Circle")
                     [circleBase, otherBase] = [baseA, baseB];
@@ -717,9 +714,7 @@ function program() {
                 contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase));
             }
             else if (collisionType === "Circle-Circle") {
-                const centroidAToCentroidB = baseB.position
-                    .subtract(baseA.position)
-                    .normalize();
+                const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize();
                 contactPoints.push(baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius)));
             }
             for (const point of contactPoints) {
@@ -877,9 +872,7 @@ function program() {
                 if (client.id === box.id)
                     continue;
                 // skip duplicate collision checks
-                const formattedCollision = box.id < client.id
-                    ? box.id + "," + client.id
-                    : client.id + "," + box.id;
+                const formattedCollision = box.id < client.id ? box.id + "," + client.id : client.id + "," + box.id;
                 if (collisionSet.has(formattedCollision))
                     continue;
                 collisionSet.add(formattedCollision);
@@ -961,18 +954,11 @@ function program() {
         const initialRowGap = 16;
         const rowGap = 0;
         const start = margin + padding;
-        const metricDisplayWidth = padding +
-            keyWidth +
-            dataToDisplay.length * (dataWidth + columnGap) +
-            padding;
+        const metricDisplayWidth = padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding;
         fill(0, 0, 0, 120);
         pushMatrix();
         const metricCount = Object.keys(Perf.metrics).length;
-        rect(margin, margin, metricDisplayWidth, padding +
-            (metricCount + 1) * rowHeight +
-            metricCount * rowGap +
-            initialRowGap +
-            padding);
+        rect(margin, margin, metricDisplayWidth, padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding);
         fill(255, 255, 255);
         if (ticks % displayPeriod === 0) {
             const totalData = Perf.getMetricData("total");
@@ -1021,9 +1007,7 @@ function program() {
             for (const dataKey of dataToDisplay) {
                 let data = metric[dataKey];
                 const unit = dataKey === "percentage" ? "%" : "ms";
-                data = isNaN(data)
-                    ? displayPeriod - ticks / dt
-                    : `${data.toFixed(3)} ${unit}`;
+                data = isNaN(data) ? displayPeriod - ticks / dt : `${data.toFixed(3)} ${unit}`;
                 text(data, ddx, dy);
                 ddx += dataWidth + columnGap;
             }

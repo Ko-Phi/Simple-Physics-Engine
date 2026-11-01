@@ -39,9 +39,10 @@ function program() {
     round(num * pow(10, deciPlace)) / pow(10, deciPlace)
 
   const shift = <Type>(xs: Array<Type>): Array<Type> => xs.slice(1).concat(xs[0])
-  const zip = <Type>(...arrays: Array<Array<Type>>) => arrays[0].map((_, index) => arrays.map(array => array[index]))
+  const zip = <Type>(...arrays: Array<Array<Type>>) =>
+    arrays[0].map((_, index) => arrays.map((array) => array[index]))
   const zipWith = <a, b, c>(arr1: a[], arr2: b[], fn: (a: a, b: b) => c) =>
-    arr1.map((val, i) => fn(val, arr2[i]));
+    arr1.map((val, i) => fn(val, arr2[i]))
   const zipShift = <Type>(xs: Array<Type>) => zip(xs, shift(xs))
 
   let idCount = 0
@@ -57,11 +58,7 @@ function program() {
   class Vector {
     x: number
     y: number
-    constructor(
-      input1: number,
-      input2: number,
-      init: VectorInit = "component",
-    ) {
+    constructor(input1: number, input2: number, init: VectorInit = "component") {
       ;[this.x, this.y] =
         init === "component"
           ? [input1, input2]
@@ -76,15 +73,14 @@ function program() {
     subtract = (v: Vector): Vector => this.add(v.negate())
     scale = (c: number): Vector => new Vector(this.x * c, this.y * c)
     divide = (c: number): Vector => this.scale(1 / c)
-    normalize = (): Vector =>
-      (r => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()) // I miss u haskell </3
+    normalize = (): Vector => ((r) => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()) // I miss u haskell </3
     dotProduct = (v: Vector): number => this.x * v.x + this.y * v.y
     crossProduct = (v: Vector): number => -(this.x * v.y - this.y * v.x) // As world is inverted-cartesian
     perpendicular = (): Vector => new Vector(-this.y, this.x)
     rotate = (θ: number): Vector =>
       new Vector(
         this.x * Math.cos(θ) - this.y * Math.sin(θ),
-        this.x * Math.sin(θ) + this.y * Math.cos(θ),
+        this.x * Math.sin(θ) + this.y * Math.cos(θ)
       )
     display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3)
     equalTo = (vector: Vector) => this.x === vector.x && this.y === vector.y
@@ -100,10 +96,7 @@ function program() {
     alpha: number
     model: ColorModel
     cachedValue: number
-    constructor(
-      channels: NArray<number, 3> | NArray<number, 4>,
-      model: ColorModel = "RGB",
-    ) {
+    constructor(channels: NArray<number, 3> | NArray<number, 4>, model: ColorModel = "RGB") {
       this.channels = channels.slice(0, 3) as NArray<number, 3>
       this.alpha = channels.length === 4 ? channels[3] : 255
       this.model = model
@@ -115,11 +108,7 @@ function program() {
     }
     toRGB() {
       if (this.model === "RGB") return
-      const [hue, sat, val] = [
-        this.channels[0],
-        this.channels[1],
-        this.channels[2],
-      ]
+      const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]]
       const hueP = hue / 60
       const chroma = val * sat
       const x = chroma * (1 - Math.abs((hueP % 2) - 1))
@@ -133,15 +122,12 @@ function program() {
       else if (hueP < 6) [r, g, b] = [chroma, 0, x]
       else throw new Error("RGB undefined")
 
-      this.channels = [r, g, b].map(c => (c + val - chroma) * 255) as NArray<
-        number,
-        3
-      >
+      this.channels = [r, g, b].map((c) => (c + val - chroma) * 255) as NArray<number, 3>
       this.model = "RGB"
     }
     toHSV() {
       if (this.model === "HSV") return
-      const [rP, gP, bP] = this.channels.slice(0, 3).map(c => c / 255)
+      const [rP, gP, bP] = this.channels.slice(0, 3).map((c) => c / 255)
       const cMax = Math.max(rP, gP, bP)
       const cMin = Math.min(rP, gP, bP)
       const delta = cMax - cMin
@@ -159,12 +145,7 @@ function program() {
     }
     value() {
       if (this.model === "HSV") this.toRGB()
-      return color(
-        this.channels[0],
-        this.channels[1],
-        this.channels[2],
-        this.alpha,
-      )
+      return color(this.channels[0], this.channels[1], this.channels[2], this.alpha)
     }
   }
 
@@ -180,9 +161,7 @@ function program() {
     }
     key = (x: number, y: number): string => x + "," + y
     getIndex = (x: number, y: number): Vector =>
-      new Vector(
-        ...([x, y].map(c => Math.floor(c / this.cellSize)) as [number, number]),
-      )
+      new Vector(...([x, y].map((c) => Math.floor(c / this.cellSize)) as [number, number]))
     newClient(client: Base) {
       client.indices = []
       this.insert(client)
@@ -236,12 +215,7 @@ function program() {
             }
           }
           if (displayGridCheck)
-            rect(
-              x * this.cellSize,
-              y * this.cellSize,
-              this.cellSize,
-              this.cellSize,
-            )
+            rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize)
           cellsChecked++
         }
       }
@@ -298,26 +272,20 @@ function program() {
 
   const world = new SpatialHashGrid(gridSize)
 
-  function regularPolyVerts(
-    x: number,
-    y: number,
-    radius: number,
-    sideCount: number,
-  ) {
+  function regularPolyVerts(x: number, y: number, radius: number, sideCount: number) {
     const vertices = []
     for (let i = 0; i < sideCount; i++)
       vertices.push(
         new Vector(
           x + radius * Math.cos((2 * PI * i) / sideCount),
-          y + radius * Math.sin((2 * PI * i) / sideCount),
-        ),
+          y + radius * Math.sin((2 * PI * i) / sideCount)
+        )
       )
     return vertices
   }
   function polyVerts(...inputs: number[]): Vector[] {
     let vertices = []
-    for (let i = 0; i < inputs.length; i += 2)
-      vertices.push(new Vector(inputs[i], inputs[i + 1]))
+    for (let i = 0; i < inputs.length; i += 2) vertices.push(new Vector(inputs[i], inputs[i + 1]))
     return vertices
   }
 
@@ -348,7 +316,7 @@ function program() {
             maxSqRadius = max(vertex.getSqMag(), maxSqRadius)
             return sum.add(vertex)
           },
-          new Vector(0, 0),
+          new Vector(0, 0)
         )
         .divide(this.vertices.length)
       this.radius = sqrt(maxSqRadius)
@@ -369,7 +337,7 @@ function program() {
     constructor(
       radius: number,
       color: Color = new Color([0, 0, 0, 0]),
-      centroid: Vector = new Vector(0, 0),
+      centroid: Vector = new Vector(0, 0)
     ) {
       this.type = "Circle"
       this.centroid = centroid
@@ -378,17 +346,12 @@ function program() {
     }
     draw(dx: number, dy: number, base: Base) {
       if (!sameColor) fill(this.color.cachedValue)
-      ellipse(
-        this.centroid.x,
-        this.centroid.y,
-        this.radius * 2,
-        this.radius * 2,
-      )
+      ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2)
       line(
         this.centroid.x,
         this.centroid.y,
         this.radius * cos(base.dir),
-        this.radius * sin(base.dir),
+        this.radius * sin(base.dir)
       )
     }
   }
@@ -407,6 +370,7 @@ function program() {
   }
 
   type WindingOrder = "CW" | "CCW"
+  type UpdateType = "None" | "AABB" | "SAT"
   abstract class AHitbox {
     abstract normals: Vector[]
 
@@ -423,7 +387,7 @@ function program() {
     abstract cachedNormals: Vector[]
     abstract cachedCentroid: Vector
 
-    abstract lastUpdate: "None" | "AABB" | "SAT"
+    abstract lastUpdate: UpdateType
     abstract shallowUpdate: (base: Base) => void
     abstract narrowUpdate: (base: Base) => void
     abstract project: (axis: Vector, base: Base) => { min: number; max: number }
@@ -443,7 +407,7 @@ function program() {
     rotatedVertices: Vector[]
     transformedVertices: Vector[]
     cachedDir: number
-    lastUpdate: "None" | "AABB" | "SAT"
+    lastUpdate: UpdateType
     cachedNormals: Vector[]
     cachedCentroid: Vector
 
@@ -457,29 +421,45 @@ function program() {
       this.cachedNormals = []
       this.rho = rho ?? 1
 
-      this.area = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0)
+      this.area = zipShift(this.vertices).reduce(
+        (area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex),
+        0
+      )
       this.windingOrder = this.area < 0 ? "CW" : "CCW"
       this.area = abs(this.area) / 2
       this.mass = this.area * this.rho
-      this.rotatedVertices = this.rotatedVertices.map(v => v.rotate(base.dir))
-      const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice()
-      this.momentOfInertia = zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) =>
-        (subArea => inertia +
-          subArea *
-          (vertex.getSqMag() +
-            vertex.dotProduct(nextVertex) +
-            nextVertex.getSqMag()))(vertex.crossProduct(nextVertex))
-        , 0) * (this.rho / 12) - this.mass * this.centroid.getSqMag()
+      this.rotatedVertices = this.rotatedVertices.map((v) => v.rotate(base.dir))
+      const loopedVertices =
+        this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice()
+      this.momentOfInertia =
+        zipShift(loopedVertices).reduce(
+          (inertia, [vertex, nextVertex]) =>
+            ((subArea) =>
+              inertia +
+              subArea *
+                (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(
+              vertex.crossProduct(nextVertex)
+            ),
+          0
+        ) *
+          (this.rho / 12) -
+        this.mass * this.centroid.getSqMag()
 
-      this.cachedNormals = zipWith(this.vertices, shift(this.vertices),
-        (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize()
+      this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) =>
+        nextVertex.subtract(vertex).perpendicular().normalize()
       )
-      this.normals = this.cachedNormals.map(n => n.copy())
+      this.normals = this.cachedNormals.map((n) => n.copy())
 
       this.cachedCentroid = this.centroid.copy()
-      const doubleRadius = 2 * sqrt(this.vertices.reduce((maxSqRadius, vertex) => max(
-        vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius,
-      ), -Infinity))
+      const doubleRadius =
+        2 *
+        sqrt(
+          this.vertices.reduce(
+            (maxSqRadius, vertex) =>
+              max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius),
+            -Infinity
+          )
+        )
       // Better for more uniform shapes (this scenario)
       this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid)
 
@@ -489,10 +469,7 @@ function program() {
       this.lastUpdate = "AABB"
 
       // check if rotation recalc neccessary
-      if (
-        base.dir !== this.cachedDir &&
-        this.cachedCentroid.x + this.cachedCentroid.y !== 0
-      )
+      if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
         this.centroid.rotate(base.dir)
       if (!displayAABB) return
       // display AABB (note aabb centroid points to base centroid)
@@ -504,7 +481,7 @@ function program() {
       pushMatrix()
       translate(
         this.centroid.x + base.position.x + canvasHalfWidth,
-        this.centroid.y + base.position.y + canvasHalfHeight,
+        this.centroid.y + base.position.y + canvasHalfHeight
       )
       rect(-aabbWidth / 2, -aabbHeight / 2, aabbWidth, aabbHeight)
       ellipse(0, 0, this.radius * 2, this.radius * 2)
@@ -513,42 +490,38 @@ function program() {
       if (this.lastUpdate !== "AABB") return
       this.lastUpdate = "SAT"
 
-      this.transformedVertices = this.vertices.map(vertex =>
-        vertex.rotate(base.dir).add(base.position),
+      this.transformedVertices = this.vertices.map((vertex) =>
+        vertex.rotate(base.dir).add(base.position)
       )
-      this.normals = this.cachedNormals.map(cachedNormal =>
-        cachedNormal.rotate(base.dir),
-      )
+      this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir))
     }
     project(axis: Vector): { min: number; max: number } {
-      const projections = this.transformedVertices.map(vertex =>
-        vertex.dotProduct(axis),
-      )
-      return { min: Math.min(...projections), max: Math.max(...projections) }
+      const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis))
+      return {
+        min: Math.min(...projections),
+        max: Math.max(...projections),
+      }
     }
     closestPointToCentroidOf(base: Base): Vector {
       let closestPoint = new Vector(0, 0)
       let minDistanceSquared = Infinity
       const centroid = base.position.add(base.hitbox.centroid)
       // loop over this object's edges
-      zipShift(this.transformedVertices).forEach(
-        ([vertexA, vertexB]) => {
+      zipShift(this.transformedVertices).forEach(([vertexA, vertexB]) => {
+        // get closest point on side
+        const sideAB = vertexB.subtract(vertexA)
+        const sideACentroid = centroid.subtract(vertexA)
+        let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag()
+        projection = constrain(projection, 0, 1)
 
-          // get closest point on side
-          const sideAB = vertexB.subtract(vertexA)
-          const sideACentroid = centroid.subtract(vertexA)
-          let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag()
-          projection = constrain(projection, 0, 1)
-
-          const point = vertexA.add(sideAB.scale(projection))
-          const difference = point.subtract(centroid)
-          const distanceSquared = difference.getSqMag()
-          if (distanceSquared < minDistanceSquared) {
-            minDistanceSquared = distanceSquared
-            closestPoint = point
-          }
-        },
-      )
+        const point = vertexA.add(sideAB.scale(projection))
+        const difference = point.subtract(centroid)
+        const distanceSquared = difference.getSqMag()
+        if (distanceSquared < minDistanceSquared) {
+          minDistanceSquared = distanceSquared
+          closestPoint = point
+        }
+      })
       return closestPoint
     }
   }
@@ -566,7 +539,7 @@ function program() {
     rotatedVertices: Vector[]
     transformedVertices: Vector[]
     cachedDir: number
-    lastUpdate: "None" | "AABB" | "SAT"
+    lastUpdate: UpdateType
     cachedNormals: Vector[]
     cachedCentroid: Vector
 
@@ -595,10 +568,7 @@ function program() {
       this.lastUpdate = "AABB"
 
       // check if rotation recalc neccessary
-      if (
-        base.dir !== this.cachedDir &&
-        this.cachedCentroid.x + this.cachedCentroid.y !== 0
-      )
+      if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
         this.centroid.rotate(base.dir)
       if (!displayAABB) return
       // display AABB (note aabb centroid points to base centroid)
@@ -610,7 +580,7 @@ function program() {
       pushMatrix()
       translate(
         this.centroid.x + base.position.x + canvasHalfWidth,
-        this.centroid.y + base.position.y + canvasHalfHeight,
+        this.centroid.y + base.position.y + canvasHalfHeight
       )
       rect(-aabbWidth / 2, -aabbHeight / 2, aabbWidth, aabbHeight)
       ellipse(0, 0, this.radius * 2, this.radius * 2)
@@ -621,7 +591,10 @@ function program() {
     project(axis: Vector, base: Base): { min: number; max: number } {
       const centroid = this.centroid.add(base.position)
       const projection = axis.dotProduct(centroid)
-      return { min: projection - this.radius, max: projection + this.radius }
+      return {
+        min: projection - this.radius,
+        max: projection + this.radius,
+      }
     }
     closestPointToCentroidOf(): Vector {
       throw "Uncalleable"
@@ -646,12 +619,7 @@ function program() {
     axesBuffer: Vector[]
     ticks: number
 
-    constructor(
-      position: Vector,
-      dir: number,
-      shape: Shape,
-      velocity?: Vector,
-    ) {
+    constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector) {
       this.id = newid()
       this.indices = []
       this.position = position
@@ -667,7 +635,7 @@ function program() {
         this.velocity = new Vector(
           random(0, 2 * PI),
           velocityMagnitude * random(0.75, 1.25),
-          "dirMag",
+          "dirMag"
         )
         this.omega = random(-0.15, 0.15)
       } else {
@@ -683,8 +651,7 @@ function program() {
       const input_dir = keys[69] - keys[81]
       const translation = new Vector(input_x, input_y).normalize()
 
-      if (this.velocity.getMag() < 3)
-        this.velocity = this.velocity.add(translation.divide(5))
+      if (this.velocity.getMag() < 3) this.velocity = this.velocity.add(translation.divide(5))
       else this.velocity = this.velocity.normalize().scale(2.9)
       if (abs(this.omega) < 0.1) this.omega += input_dir / 100
       else this.omega = Math.sign(this.omega) * 0.09
@@ -695,31 +662,23 @@ function program() {
       this.dir += this.omega * dt
 
       const velocity = this.velocity.getMag()
-      if (velocity > mu)
-        this.velocity = this.velocity.subtract(
-          this.velocity.scale(mu / velocity),
-        )
+      if (velocity > mu) this.velocity = this.velocity.subtract(this.velocity.scale(mu / velocity))
       else this.velocity = new Vector(0, 0)
 
       if (abs(this.position.x) > canvasHalfWidth + this.hitbox.aabb.width / 2) {
         this.position.x =
-          -Math.sign(this.position.x) *
-          (canvasHalfWidth + this.hitbox.aabb.width / 2)
+          -Math.sign(this.position.x) * (canvasHalfWidth + this.hitbox.aabb.width / 2)
       }
-      if (
-        abs(this.position.y) >
-        canvasHalfHeight + this.hitbox.aabb.height / 2
-      ) {
+      if (abs(this.position.y) > canvasHalfHeight + this.hitbox.aabb.height / 2) {
         this.position.y =
-          -Math.sign(this.position.y) *
-          (canvasHalfHeight + this.hitbox.aabb.width / 2)
+          -Math.sign(this.position.y) * (canvasHalfHeight + this.hitbox.aabb.width / 2)
       }
 
       if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
         this.velocity = new Vector(
           random(0, 2 * PI),
           velocityMagnitude * random(0.75, 1.25),
-          "dirMag",
+          "dirMag"
         )
         this.omega = random(-0.01, 0.01) * scale
       }
@@ -748,10 +707,7 @@ function program() {
 
       let axes = this.axesBuffer
       // Circle-Circle test
-      if (
-        baseA.hitbox.type === baseB.hitbox.type &&
-        baseA.hitbox.type === "Circle"
-      ) {
+      if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
         const sqDistance = baseA.hitbox.centroid
           .add(baseA.position)
           .subtract(baseB.hitbox.centroid.add(baseB.position))
@@ -783,8 +739,7 @@ function program() {
         const projB = baseB.hitbox.project(axis, baseB)
 
         // check if seperate
-        if (projA.max < projB.min || projB.max < projA.min)
-          return { colliding: false }
+        if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
 
         const overlap = min(projA.max, projB.max) - max(projA.min, projB.min)
         if (overlap < minOverlap) {
@@ -797,13 +752,11 @@ function program() {
       if (baseA.hitbox.type !== baseB.hitbox.type) {
         // get closest point on edge and add to normals
         let circleBase, otherBase
-        if (baseA.hitbox.type === "Circle")
-          [circleBase, otherBase] = [baseA, baseB]
-        else[circleBase, otherBase] = [baseB, baseA]
+        if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB]
+        else [circleBase, otherBase] = [baseB, baseA]
         const centroid = circleBase.position.add(circleBase.hitbox.centroid)
 
-        const closestPoint =
-          otherBase.hitbox.closestPointToCentroidOf(circleBase)
+        const closestPoint = otherBase.hitbox.closestPointToCentroidOf(circleBase)
         const axis = closestPoint.subtract(centroid).normalize()
 
         // project each hitbox's vertices
@@ -811,8 +764,7 @@ function program() {
         const projB = baseB.hitbox.project(axis, baseB)
 
         // check if seperate
-        if (projA.max < projB.min || projB.max < projA.min)
-          return { colliding: false }
+        if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
 
         const overlap = min(projA.max, projB.max) - max(projA.min, projB.min)
         if (overlap < minOverlap) {
@@ -876,7 +828,7 @@ function program() {
           const vertices = base.hitbox.transformedVertices
           const otherVertices = otherBase.hitbox.transformedVertices
           // vertex loop
-          vertices.forEach(vertexA => {
+          vertices.forEach((vertexA) => {
             // side loop
             otherVertices.forEach((vertexB, index, bVertices) => {
               const vertexC = bVertices[(index + 1) % bVertices.length]
@@ -891,8 +843,7 @@ function program() {
               const distanceSquared = sideAP.getSqMag()
               if (distanceSquared < 1 && contactPoints.length < 2) {
                 if (contactPoints.length === 1) {
-                  if (contactPoints[0].subtract(point).getSqMag() > 0.01)
-                    contactPoints.push(point)
+                  if (contactPoints[0].subtract(point).getSqMag() > 0.01) contactPoints.push(point)
                 } else contactPoints.push(point)
               }
             })
@@ -900,24 +851,14 @@ function program() {
         })
         if (contactPoints.length === 0)
           contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB))
-      } else if (
-        collisionType === "Polygon-Circle" ||
-        collisionType === "Circle-Polygon"
-      ) {
+      } else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
         let circleBase, otherBase
-        if (baseA.hitbox.type === "Circle")
-          [circleBase, otherBase] = [baseA, baseB]
-        else[circleBase, otherBase] = [baseB, baseA]
-        contactPoints.push(
-          otherBase.hitbox.closestPointToCentroidOf(circleBase),
-        )
+        if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB]
+        else [circleBase, otherBase] = [baseB, baseA]
+        contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase))
       } else if (collisionType === "Circle-Circle") {
-        const centroidAToCentroidB = baseB.position
-          .subtract(baseA.position)
-          .normalize()
-        contactPoints.push(
-          baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius)),
-        )
+        const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize()
+        contactPoints.push(baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius)))
       }
 
       for (const point of contactPoints) {
@@ -931,12 +872,8 @@ function program() {
       for (const contactPoint of contactPoints) {
         const vectorAC = contactPoint.subtract(baseA.position)
         const vectorBC = contactPoint.subtract(baseB.position)
-        const contactVelocityA = baseA.velocity.add(
-          vectorAC.perpendicular().scale(baseA.omega),
-        )
-        const contactVelocityB = baseB.velocity.add(
-          vectorBC.perpendicular().scale(baseB.omega),
-        )
+        const contactVelocityA = baseA.velocity.add(vectorAC.perpendicular().scale(baseA.omega))
+        const contactVelocityB = baseB.velocity.add(vectorBC.perpendicular().scale(baseB.omega))
 
         const velocityAB = contactVelocityB.subtract(contactVelocityA)
 
@@ -948,9 +885,7 @@ function program() {
             sq(vectorAC.crossProduct(axis)) / inertiaA +
             sq(vectorBC.crossProduct(axis)) / inertiaB)
 
-        baseA.velocity = baseA.velocity.subtract(
-          axis.scale(impulseScalar / massA),
-        )
+        baseA.velocity = baseA.velocity.subtract(axis.scale(impulseScalar / massA))
         baseA.omega += (vectorAC.crossProduct(axis) * impulseScalar) / inertiaA
 
         baseB.velocity = baseB.velocity.add(axis.scale(impulseScalar / massB))
@@ -964,78 +899,49 @@ function program() {
     let shape =
       (ceil(random(0, 5)) > 3 && !allCircles) || allPolys
         ? new Polygon(
-          regularPolyVerts(
-            0,
-            0,
-            ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
-            ceil(random(2, 7)),
-          ),
-          new Color([255, 0, 0]),
-        )
-        : new Circle(
-          ceil(scale * random(0.9, 1.1)),
-          new Color([255, 0, 0]),
-        )
+            regularPolyVerts(
+              0,
+              0,
+              ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
+              ceil(random(2, 7))
+            ),
+            new Color([255, 0, 0])
+          )
+        : new Circle(ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]))
     if (random(0, 5) > 4) {
-      let hWidth =
-        scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4)
+      let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4)
       let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5
       shape = new Polygon(
-        polyVerts(
-          -hWidth,
-          -hHeight,
-          hWidth,
-          -hHeight,
-          hWidth,
-          hHeight,
-          -hWidth,
-          hHeight,
-        ),
-        new Color([255, 0, 0]),
+        polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight),
+        new Color([255, 0, 0])
       )
     }
     boxes.push(
       new Base(
         new Vector(
           random(-canvasHalfWidth, canvasHalfWidth),
-          random(-canvasHalfHeight, canvasHalfHeight),
+          random(-canvasHalfHeight, canvasHalfHeight)
         ),
         random(0, 2 * PI),
-        shape,
-      ),
+        shape
+      )
     )
   }
   if (insertCount === 0)
     boxes.push(
-      new Base(
-        new Vector(-100, 0),
-        0,
-        new Circle(20, new Color([255, 0, 0])),
-        new Vector(1, 0),
-      ),
-      new Base(
-        new Vector(100, 0),
-        0,
-        new Circle(100, new Color([255, 0, 0])),
-      ),
-      new Base(
-        new Vector(0, -100),
-        0,
-        new Circle(35, new Color([255, 0, 0])),
-      ),
+      new Base(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)),
+      new Base(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))),
+      new Base(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))),
       new Base(
         new Vector(0, 100),
         1.5,
-        new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0])),
+        new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))
       ),
       new Base(
         new Vector(0, 200),
         1.2,
-        new Polygon(
-          polyVerts(-25, -50, 25, -50, 25, 50, -25, 50),
-          new Color([255, 0, 0]),
-        ),
-      ),
+        new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))
+      )
     )
 
   const displayPeriod = 60
@@ -1067,12 +973,10 @@ function program() {
     } {
       let buffer = this.metrics[key].buffer
 
-      const average =
-        buffer.reduce((acc: number, time: number) => acc + time) / buffer.length
+      const average = buffer.reduce((acc: number, time: number) => acc + time) / buffer.length
 
       let percentage = 100
-      if (key !== "total")
-        percentage = (average / this.metrics.total.savedData.average) * 100
+      if (key !== "total") percentage = (average / this.metrics.total.savedData.average) * 100
 
       return {
         min: min(buffer),
@@ -1162,11 +1066,7 @@ function program() {
     for (const box of boxes) {
       const aabb = box.hitbox.aabb
       Perf.getTime()
-      const clients = world.queryGrid(
-        box.position.add(aabb.centroid),
-        aabb.width,
-        aabb.height,
-      )
+      const clients = world.queryGrid(box.position.add(aabb.centroid), aabb.width, aabb.height)
       Perf.updateMetric("gridQuery")
 
       for (const client of clients) {
@@ -1174,9 +1074,7 @@ function program() {
         if (client.id === box.id) continue
         // skip duplicate collision checks
         const formattedCollision =
-          box.id < client.id
-            ? box.id + "," + client.id
-            : client.id + "," + box.id
+          box.id < client.id ? box.id + "," + client.id : client.id + "," + box.id
         if (collisionSet.has(formattedCollision)) continue
 
         collisionSet.add(formattedCollision)
@@ -1220,7 +1118,7 @@ function program() {
           box.position.x + box.hitbox.centroid.x + canvasHalfWidth,
           box.position.y + box.hitbox.centroid.y + canvasHalfHeight,
           diameter,
-          diameter,
+          diameter
         )
       } else box.draw()
       fill(211, 175, 55)
@@ -1228,7 +1126,7 @@ function program() {
         box.position.x + box.hitbox.centroid.x + canvasHalfWidth,
         box.position.y + box.hitbox.centroid.y + canvasHalfHeight,
         5,
-        5,
+        5
       )
     }
     Perf.updateMetric("drawBoxes")
@@ -1242,8 +1140,7 @@ function program() {
 
     Perf.getTotal()
 
-    const totalCells =
-      (canvasHalfWidth * 2 * (canvasHalfHeight * 2)) / gridSize ** 2
+    const totalCells = (canvasHalfWidth * 2 * (canvasHalfHeight * 2)) / gridSize ** 2
     const countMetrics = [
       "Cells Filled",
       world.grid.size + " / " + totalCells,
@@ -1276,10 +1173,7 @@ function program() {
     const start = margin + padding
 
     const metricDisplayWidth =
-      padding +
-      keyWidth +
-      dataToDisplay.length * (dataWidth + columnGap) +
-      padding
+      padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding
     fill(0, 0, 0, 120)
     pushMatrix()
     const metricCount = Object.keys(Perf.metrics).length
@@ -1287,11 +1181,7 @@ function program() {
       margin,
       margin,
       metricDisplayWidth,
-      padding +
-      (metricCount + 1) * rowHeight +
-      metricCount * rowGap +
-      initialRowGap +
-      padding,
+      padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding
     )
     fill(255, 255, 255)
 
@@ -1315,12 +1205,7 @@ function program() {
 
     fill(255, 255, 255)
     noStroke()
-    rect(
-      start,
-      start + rowHeight,
-      dataToDisplay.length * (dataWidth + columnGap) + keyWidth,
-      3,
-    )
+    rect(start, start + rowHeight, dataToDisplay.length * (dataWidth + columnGap) + keyWidth, 3)
 
     textFont(font, 24)
     dx = start + keyWidth + columnGap
@@ -1344,8 +1229,7 @@ function program() {
           formattedKey.push(character.toUpperCase())
           continue
         }
-        if (character.toUpperCase() === character)
-          formattedKey.push(" ", character)
+        if (character.toUpperCase() === character) formattedKey.push(" ", character)
         else formattedKey.push(character)
       }
 
@@ -1354,9 +1238,7 @@ function program() {
       for (const dataKey of dataToDisplay) {
         let data = metric[dataKey]
         const unit = dataKey === "percentage" ? "%" : "ms"
-        data = isNaN(data)
-          ? displayPeriod - ticks / dt
-          : `${data.toFixed(3)} ${unit}`
+        data = isNaN(data) ? displayPeriod - ticks / dt : `${data.toFixed(3)} ${unit}`
 
         text(data, ddx, dy)
         ddx += dataWidth + columnGap
@@ -1370,14 +1252,8 @@ function program() {
     stroke(0)
     const counterDisplayHeight =
       padding + (countMetrics.length / 2) * (rowHeight + rowGap) + padding
-    const counterDisplayWidth =
-      padding + keyWidth + columnGap + dataWidth + padding
-    rect(
-      margin,
-      height - margin - counterDisplayHeight,
-      counterDisplayWidth,
-      counterDisplayHeight,
-    )
+    const counterDisplayWidth = padding + keyWidth + columnGap + dataWidth + padding
+    rect(margin, height - margin - counterDisplayHeight, counterDisplayWidth, counterDisplayHeight)
     fill(255)
     dy = height - margin - counterDisplayHeight + padding
     for (let i = 0; i < countMetrics.length; i += 2) {
@@ -1397,4 +1273,3 @@ function program() {
 }
 
 runPJS(program)
-
