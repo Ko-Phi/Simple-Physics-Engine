@@ -1,4 +1,6 @@
-"use strict";
+import { sq, constrain, random, shift, zipWith, zipShift } from "./utils.js";
+import { Vector } from "./Data/vector.js";
+import { Color } from "./Data/color.js";
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 if (ctx === null)
@@ -26,15 +28,6 @@ const drawAsCircles = false; // shapes drawn as circles. Increases performance
 const displayAABB = false; // aabbs drawn. Uses rect() so not very good for performance
 const displayGridCheck = false; // checked grids are highlighted. Very performance intensive
 const sameColor = false; // shapes drawn with the same color. Minor performance gain
-const sq = (n) => n * n;
-const constrain = (n, maxi, mini) => Math.max(maxi, Math.min(mini, n));
-const rounD = (num, deciPlace) => Math.round(num * Math.pow(10, deciPlace)) / Math.pow(10, deciPlace);
-const random = (min, max) => Math.random() * (max - min) + min;
-const range = (start, stop, step = 1) => Array.from({ length: Math.ceil((stop - start) / step) }, (_, i) => start + i * step);
-const shift = (xs) => xs.slice(1).concat(xs[0]);
-const zip = (...arrays) => arrays[0].map((_, index) => arrays.map((array) => array[index]));
-const zipWith = (arr1, arr2, fn) => arr1.map((val, i) => fn(val, arr2[i]));
-const zipShift = (xs) => zip(xs, shift(xs));
 let idCount = 0;
 const newid = () => idCount++;
 const rgba = (...inputs) => {
@@ -103,101 +96,8 @@ const text = (str, x, y) => {
 const noStroke = () => {
     ctx.lineWidth = 0;
 };
-class Vector {
-    x;
-    y;
-    constructor(input1, input2, init = "component") {
-        ;
-        [this.x, this.y] =
-            init === "component"
-                ? [input1, input2]
-                : [input2 * Math.cos(input1), input2 * Math.sin(input1)];
-    }
-    copy = () => new Vector(this.x, this.y);
-    getSqMag = () => sq(this.x) + sq(this.y);
-    getMag = () => Math.sqrt(this.getSqMag());
-    theta = () => Math.atan2(this.y, this.x);
-    add = (v) => new Vector(this.x + v.x, this.y + v.y);
-    negate = () => new Vector(-this.x, -this.y);
-    subtract = (v) => this.add(v.negate());
-    scale = (c) => new Vector(this.x * c, this.y * c);
-    divide = (c) => this.scale(1 / c);
-    normalize = () => ((r) => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()); // I miss u haskell </3
-    dotProduct = (v) => this.x * v.x + this.y * v.y;
-    crossProduct = (v) => -(this.x * v.y - this.y * v.x); // As world is inverted-cartesian
-    perpendicular = () => new Vector(-this.y, this.x);
-    rotate = (θ) => new Vector(this.x * Math.cos(θ) - this.y * Math.sin(θ), this.x * Math.sin(θ) + this.y * Math.cos(θ));
-    display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
-    equalTo = (vector) => this.x === vector.x && this.y === vector.y;
-}
-class Color {
-    channels;
-    alpha;
-    model;
-    cachedValue;
-    constructor(channels, model = "RGB") {
-        this.channels = channels.slice(0, 3);
-        this.alpha = channels.length === 4 ? channels[3] : 255;
-        this.model = model;
-        this.cachedValue = this.value();
-        this.toRGB();
-        this.toHSV();
-        this.toRGB();
-        this.toHSV();
-    }
-    toRGB() {
-        if (this.model === "RGB")
-            return;
-        const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]];
-        const hueP = hue / 60;
-        const chroma = val * sat;
-        const x = chroma * (1 - Math.abs((hueP % 2) - 1));
-        let r, g, b;
-        if (hueP < 1)
-            [r, g, b] = [chroma, x, 0];
-        else if (hueP < 2)
-            [r, g, b] = [x, chroma, 0];
-        else if (hueP < 3)
-            [r, g, b] = [0, chroma, x];
-        else if (hueP < 4)
-            [r, g, b] = [0, x, chroma];
-        else if (hueP < 5)
-            [r, g, b] = [x, 0, chroma];
-        else if (hueP < 6)
-            [r, g, b] = [chroma, 0, x];
-        else
-            throw new Error("RGB undefined");
-        this.channels = [r, g, b].map((c) => (c + val - chroma) * 255);
-        this.model = "RGB";
-    }
-    toHSV() {
-        if (this.model === "HSV")
-            return;
-        const [rP, gP, bP] = this.channels.slice(0, 3).map((c) => c / 255);
-        const cMax = Math.max(rP, gP, bP);
-        const cMin = Math.min(rP, gP, bP);
-        const delta = cMax - cMin;
-        let hue;
-        if (delta === 0)
-            hue = 0;
-        else if (cMax === rP)
-            hue = (((gP - bP) / delta) % 6) * 60;
-        else if (cMax === gP)
-            hue = ((bP - rP) / delta + 2) * 60;
-        else
-            throw new Error("Hue undefined");
-        const sat = cMax === 0 ? 0 : delta / cMax;
-        this.channels = [hue, sat, cMax];
-        this.model = "HSV";
-    }
-    value() {
-        if (this.model === "HSV")
-            this.toRGB();
-        return `rgba(${this.channels[0]}, ${this.channels[1]}, ${this.channels[2]}, ${Math.floor(this.alpha / 255)})`;
-    }
-}
-let cellsChecked = 0;
 class SpatialHashGrid {
+    cellsChecked;
     grid;
     cellSize;
     queryIds;
@@ -205,6 +105,7 @@ class SpatialHashGrid {
         this.grid = new Map();
         this.cellSize = cellSize;
         this.queryIds = 0;
+        this.cellsChecked = 0;
     }
     key = (x, y) => x + "," + y;
     getIndex = (x, y) => new Vector(...[x, y].map((c) => Math.floor(c / this.cellSize)));
@@ -262,7 +163,7 @@ class SpatialHashGrid {
                 }
                 if (displayGridCheck)
                     rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
-                cellsChecked++;
+                this.cellsChecked++;
             }
         }
         if (displayGridCheck)
@@ -907,7 +808,7 @@ function drawLoop(timestamp) {
     Perf.resetMetrics();
     collisionSet.clear();
     collisions = [];
-    cellsChecked = 0;
+    world.cellsChecked = 0;
     ticksSinceInput++;
     //background(255)
     ctx.fillStyle = "#ffffff";
@@ -1003,7 +904,7 @@ function drawLoop(timestamp) {
         "Cells Filled",
         world.grid.size + " / " + totalCells,
         "Cells Checked",
-        cellsChecked + " / " + totalCells,
+        world.cellsChecked + " / " + totalCells,
         "SAT Calls",
         collisionChecks,
         "Object Count",

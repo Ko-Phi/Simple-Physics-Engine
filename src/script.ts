@@ -1,3 +1,8 @@
+import { sq, constrain, random, shift, zipWith, zipShift } from "./utils.js"
+import { Vector } from "./Data/vector.js"
+import { Color } from "./Data/color.js"
+import type { NArray } from "./utils.js"
+
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
 const ctx = canvas.getContext("2d")
 if (ctx === null) throw "e"
@@ -32,21 +37,6 @@ const drawAsCircles = false // shapes drawn as circles. Increases performance
 const displayAABB = false // aabbs drawn. Uses rect() so not very good for performance
 const displayGridCheck = false // checked grids are highlighted. Very performance intensive
 const sameColor = false // shapes drawn with the same color. Minor performance gain
-
-const sq = (n: number): number => n * n
-const constrain = (n: number, maxi: number, mini: number) => Math.max(maxi, Math.min(mini, n))
-const rounD = (num: number, deciPlace: number): number =>
-  Math.round(num * Math.pow(10, deciPlace)) / Math.pow(10, deciPlace)
-const random = (min: number, max: number) => Math.random() * (max - min) + min
-const range = (start: number, stop: number, step: number = 1) =>
-  Array.from({ length: Math.ceil((stop - start) / step) }, (_, i) => start + i * step)
-
-const shift = <Type>(xs: Array<Type>): Array<Type> => xs.slice(1).concat(xs[0])
-const zip = <Type>(...arrays: Array<Array<Type>>) =>
-  arrays[0].map((_, index) => arrays.map((array) => array[index]))
-const zipWith = <a, b, c>(arr1: a[], arr2: b[], fn: (a: a, b: b) => c) =>
-  arr1.map((val, i) => fn(val, arr2[i]))
-const zipShift = <Type>(xs: Array<Type>) => zip(xs, shift(xs))
 
 let idCount = 0
 const newid = () => idCount++
@@ -116,105 +106,8 @@ const noStroke = () => {
   ctx.lineWidth = 0
 }
 
-// componentInit: x, y
-// dirMagInit: dir, mag
-type VectorInit = "component" | "dirMag"
-class Vector {
-  x: number
-  y: number
-  constructor(input1: number, input2: number, init: VectorInit = "component") {
-    ;[this.x, this.y] =
-      init === "component"
-        ? [input1, input2]
-        : [input2 * Math.cos(input1), input2 * Math.sin(input1)]
-  }
-  copy = () => new Vector(this.x, this.y)
-  getSqMag = () => sq(this.x) + sq(this.y)
-  getMag = () => Math.sqrt(this.getSqMag())
-  theta = () => Math.atan2(this.y, this.x)
-  add = (v: Vector): Vector => new Vector(this.x + v.x, this.y + v.y)
-  negate = () => new Vector(-this.x, -this.y)
-  subtract = (v: Vector): Vector => this.add(v.negate())
-  scale = (c: number): Vector => new Vector(this.x * c, this.y * c)
-  divide = (c: number): Vector => this.scale(1 / c)
-  normalize = (): Vector => ((r) => (r !== 0 ? this.divide(r) : this.copy()))(this.getMag()) // I miss u haskell </3
-  dotProduct = (v: Vector): number => this.x * v.x + this.y * v.y
-  crossProduct = (v: Vector): number => -(this.x * v.y - this.y * v.x) // As world is inverted-cartesian
-  perpendicular = (): Vector => new Vector(-this.y, this.x)
-  rotate = (θ: number): Vector =>
-    new Vector(
-      this.x * Math.cos(θ) - this.y * Math.sin(θ),
-      this.x * Math.sin(θ) + this.y * Math.cos(θ)
-    )
-  display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3)
-  equalTo = (vector: Vector) => this.x === vector.x && this.y === vector.y
-}
-
-type NArray<T, N extends number, R extends T[] = []> = R["length"] extends N
-  ? R
-  : NArray<T, N, [...R, T]>
-type ColorModel = "HSV" | "RGB"
-
-class Color {
-  channels: NArray<number, 3>
-  alpha: number
-  model: ColorModel
-  cachedValue: string
-  constructor(channels: NArray<number, 3> | NArray<number, 4>, model: ColorModel = "RGB") {
-    this.channels = channels.slice(0, 3) as NArray<number, 3>
-    this.alpha = channels.length === 4 ? channels[3] : 255
-    this.model = model
-    this.cachedValue = this.value()
-    this.toRGB()
-    this.toHSV()
-    this.toRGB()
-    this.toHSV()
-  }
-  toRGB() {
-    if (this.model === "RGB") return
-    const [hue, sat, val] = [this.channels[0], this.channels[1], this.channels[2]]
-    const hueP = hue / 60
-    const chroma = val * sat
-    const x = chroma * (1 - Math.abs((hueP % 2) - 1))
-
-    let r, g, b
-    if (hueP < 1) [r, g, b] = [chroma, x, 0]
-    else if (hueP < 2) [r, g, b] = [x, chroma, 0]
-    else if (hueP < 3) [r, g, b] = [0, chroma, x]
-    else if (hueP < 4) [r, g, b] = [0, x, chroma]
-    else if (hueP < 5) [r, g, b] = [x, 0, chroma]
-    else if (hueP < 6) [r, g, b] = [chroma, 0, x]
-    else throw new Error("RGB undefined")
-
-    this.channels = [r, g, b].map((c) => (c + val - chroma) * 255) as NArray<number, 3>
-    this.model = "RGB"
-  }
-  toHSV() {
-    if (this.model === "HSV") return
-    const [rP, gP, bP] = this.channels.slice(0, 3).map((c) => c / 255)
-    const cMax = Math.max(rP, gP, bP)
-    const cMin = Math.min(rP, gP, bP)
-    const delta = cMax - cMin
-
-    let hue
-    if (delta === 0) hue = 0
-    else if (cMax === rP) hue = (((gP - bP) / delta) % 6) * 60
-    else if (cMax === gP) hue = ((bP - rP) / delta + 2) * 60
-    else throw new Error("Hue undefined")
-
-    const sat = cMax === 0 ? 0 : delta / cMax
-
-    this.channels = [hue, sat, cMax]
-    this.model = "HSV"
-  }
-  value() {
-    if (this.model === "HSV") this.toRGB()
-    return `rgba(${this.channels[0]}, ${this.channels[1]}, ${this.channels[2]}, ${Math.floor(this.alpha / 255)})`
-  }
-}
-
-let cellsChecked = 0
 class SpatialHashGrid {
+  cellsChecked
   grid: Map<string, any>
   cellSize: number
   queryIds: number
@@ -222,6 +115,7 @@ class SpatialHashGrid {
     this.grid = new Map()
     this.cellSize = cellSize
     this.queryIds = 0
+    this.cellsChecked = 0
   }
   key = (x: number, y: number): string => x + "," + y
   getIndex = (x: number, y: number): Vector =>
@@ -282,7 +176,7 @@ class SpatialHashGrid {
         }
         if (displayGridCheck)
           rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize)
-        cellsChecked++
+        this.cellsChecked++
       }
     }
     if (displayGridCheck) popMatrix()
@@ -1110,7 +1004,7 @@ function drawLoop(timestamp: number) {
   Perf.resetMetrics()
   collisionSet.clear()
   collisions = []
-  cellsChecked = 0
+  world.cellsChecked = 0
   ticksSinceInput++
   //background(255)
   ctx.fillStyle = "#ffffff"
@@ -1218,7 +1112,7 @@ function drawLoop(timestamp: number) {
     "Cells Filled",
     world.grid.size + " / " + totalCells,
     "Cells Checked",
-    cellsChecked + " / " + totalCells,
+    world.cellsChecked + " / " + totalCells,
     "SAT Calls",
     collisionChecks,
     "Object Count",
