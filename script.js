@@ -9,16 +9,16 @@ const halfHeight = height / 2;
 const period = 16.67;
 const initialVelocity = true; // objects begin with an intial velocity
 const periodicVelocityShifts = false; // velocity randomized periodically
-const velocityMagnitude = 5; // alters the magnitude of said velocity
+const velocityMagnitude = 3; // alters the magnitude of said velocity
 const collisionImpulse = true; // objects bounce off each other on collision
 const restitution = 1; // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
 const mu = 0; // add friction (should be quite small)
 const allCircles = false; // all shapes are circles. Increases performance as well
 const allPolys = false; // all shapes are polygons. Slightly more performance intensive
-const gridSize = 50; // influences hashgrid check. Can queak for minor performance improvement
+const gridSize = 25; // influences hashgrid check. Can queak for minor performance improvement
 // Box Count
-const insertCount = 50;
-const scale = 32;
+const insertCount = 1000;
+const scale = 5;
 const scaleVariance = 0;
 // Visuals
 // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
@@ -574,10 +574,9 @@ class Base {
             this.omega = random(-0.15, 0.15);
         }
         else {
-            this.velocity = new Vector(0, 0);
+            this.velocity = velocity ?? new Vector(0, 0);
             this.omega = 0;
         }
-        this.velocity = velocity ?? new Vector(0, 0);
         this.ticks = Math.floor(random(0, 50));
     }
     getInput() {
