@@ -1,36 +1,14 @@
-:root {
-  --background-color: #000000;
-}
-
-html,
-body,
-#wrapper {
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
-  margin: 0px;
-  padding: 0px;
-}
-
 body {
-  background-color: var(--background-color);
-}
-
-canvas {
-  width: fit-content;
-  height: fit-content;
-}
-
-canvas:focus {
-  outline: none;
-}
-
-/* Automatically fits to the remaining height and centers the canvas it contains */
-#wrapper {
-  padding: 0px;
-  margin: 0px;
+  margin: 0;
+  background: #111;
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100vh;
+}
+canvas {
+  background: #222;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  aspect-ratio: 9 / 6;
   width: 100%;
 }
