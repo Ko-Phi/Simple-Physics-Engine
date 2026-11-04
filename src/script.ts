@@ -1,16 +1,18 @@
 import { sq, constrain, random, rgba } from "./Utils/math.js"
-import { shift, zipWith, zipShift, type NArray } from "./Utils/arrays.js"
+import { shift, zipWith, zipShift } from "./Utils/arrays.js"
 import { Vector } from "./Data/vector.js"
 import { Color } from "./Data/color.js"
+import { Draw } from "./Utils/drawing.js"
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
-const ctx = canvas.getContext("2d")
+const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
 if (ctx === null) throw "e"
+const draw = new Draw(ctx)
+
+const outline = rgba(0)
 
 const [width, height] = [canvas.width, canvas.height]
-
-const halfWidth = width / 2
-const halfHeight = height / 2
+const [halfWidth, halfHeight] = [width / 2, height / 2]
 
 const period = 16.67
 
@@ -27,8 +29,8 @@ const allPolys = false // all shapes are polygons. Slightly more performance int
 const gridSize = 25 // influences hashgrid check. Can queak for minor performance improvement
 
 // Box Count
-const insertCount: number = 1000
-const scale = 5
+const insertCount: number = 100
+const scale = 20
 const scaleVariance = 0
 
 // Visuals
@@ -36,66 +38,9 @@ const scaleVariance = 0
 const drawAsCircles = false // shapes drawn as circles. Increases performance
 const displayAABB = false // aabbs drawn. Uses rect() so not very good for performance
 const displayGridCheck = false // checked grids are highlighted. Very performance intensive
-const sameColor = false // shapes drawn with the same color. Minor performance gain
 
 let idCount = 0
 const newid = () => idCount++
-
-let matrices: Array<NArray<number, 6>> = [[1, 0, 0, 1, 0, 0]]
-const popMatrix = () => {
-  matrices.pop()
-}
-const pushMatrix = () => {
-  matrices.push([1, 0, 0, 1, 0, 0])
-}
-const translate = (x: number, y: number) => {
-  ctx.resetTransform()
-  ctx.transform(...(matrices[matrices.length - 1] as NArray<number, 6>))
-  ctx.transform(1, 0, 0, 1, x, y)
-  const m = ctx.getTransform()
-  matrices[matrices.length - 1] = [m.a, m.b, m.c, m.d, m.e, m.f]
-  ctx.resetTransform()
-  matrices.forEach((m) => ctx.transform(...(m as NArray<number, 6>)))
-}
-const rotate = (θ: number) => {
-  ctx.resetTransform()
-  ctx.transform(...(matrices[matrices.length - 1] as NArray<number, 6>))
-  ctx.transform(Math.cos(θ), Math.sin(θ), -Math.sin(θ), Math.cos(θ), 0, 0)
-  const m = ctx.getTransform()
-  matrices[matrices.length - 1] = [m.a, m.b, m.c, m.d, m.e, m.f]
-  ctx.resetTransform()
-  matrices.forEach((m) => ctx.transform(...(m as NArray<number, 6>)))
-}
-
-const stroke = (...inputs: number[]): void => {
-  ctx.strokeStyle = rgba(...inputs)
-}
-const fill = (...inputs: number[]): void => {
-  ctx.fillStyle = rgba(...inputs)
-}
-const line = (x1: number, y1: number, x2: number, y2: number) => {
-  ctx.beginPath()
-  ctx.moveTo(x1, y1)
-  ctx.lineTo(x1, y1)
-  ctx.lineTo(x2, y2)
-  ctx.stroke()
-}
-const rect = (x: number, y: number, w: number, h: number) => {
-  ctx.fillRect(x, y, w, h)
-}
-const ellipse = (x: number, y: number, w: number, h: number) => {
-  ctx.beginPath()
-  ctx.ellipse(x, y, w / 2, h / 2, 0, 0, 2 * Math.PI)
-  ctx.closePath()
-  ctx.stroke()
-  ctx.fill()
-}
-const text = (str: string, x: number, y: number) => {
-  ctx.fillText(str, x, y)
-}
-const noStroke = () => {
-  ctx.lineWidth = 0
-}
 
 class SpatialHashGrid {
   cellsChecked
@@ -145,14 +90,7 @@ class SpatialHashGrid {
     const i2 = this.getIndex(x + w / 2, y + h / 2)
 
     // iterate over spanned area for clients
-    if (displayGridCheck) {
-      //pushMatrix()
-      //translate(halfWidth, halfHeight)
-      ctx?.resetTransform()
-      ctx?.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-      fill(180, 30)
-      stroke(180, 90)
-    }
+    if (displayGridCheck) ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
     let clients = []
     const queryId = this.queryIds++
     for (let x = i1.x; x <= i2.x; ++x) {
@@ -166,11 +104,16 @@ class SpatialHashGrid {
           }
         }
         if (displayGridCheck)
-          rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize)
+          draw.rect(
+            x * this.cellSize,
+            y * this.cellSize,
+            this.cellSize,
+            this.cellSize,
+            rgba(100, 15)
+          )
         this.cellsChecked++
       }
     }
-    if (displayGridCheck) popMatrix()
     return clients
   }
   remove(client: Base) {
@@ -202,24 +145,19 @@ class SpatialHashGrid {
     }
   }
   draw() {
-    stroke(204)
-    //pushMatrix()
-    //translate(halfWidth, halfHeight)
-
-    ctx?.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
+    ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
     for (
       let x = Math.ceil(-width / this.cellSize) * this.cellSize;
       x <= halfWidth;
       x += this.cellSize
     )
-      line(x, height, x, -height)
+      draw.line(x, height, x, -height, 1, rgba(204))
     for (
       let y = Math.ceil(-height / this.cellSize) * this.cellSize;
       y <= halfHeight;
       y += this.cellSize
     )
-      line(width, y, -width, y)
-    popMatrix()
+      draw.line(width, y, -width, y, 1, rgba(204))
   }
 }
 
@@ -249,7 +187,7 @@ abstract class AShape {
   abstract centroid: Vector
   abstract radius: number
   abstract color: Color
-  abstract draw: (x: number, y: number, base: Base) => void
+  abstract draw: (x: number, y: number, θ: number) => void
 }
 
 class Polygon implements AShape {
@@ -274,14 +212,10 @@ class Polygon implements AShape {
       .divide(this.vertices.length)
     this.radius = Math.sqrt(maxSqRadius)
   }
-  draw(dx: number, dy: number, base: Base) {
-    if (!sameColor) ctx!.fillStyle = this.color.cachedValue
-    ctx!.beginPath()
-    ctx!.moveTo(this.vertices[0].x, this.vertices[0].y)
-    for (const vert of this.vertices) ctx!.lineTo(vert.x + dx, vert.y + dy)
-    ctx!.closePath()
-    ctx!.fill()
-    ctx!.stroke()
+  draw(dx: number, dy: number, θ: number) {
+    ctx.setTransform(1, 0, 0, 1, dx, dy)
+    ctx.transform(Math.cos(θ), Math.sin(θ), -Math.sin(θ), Math.cos(θ), 0, 0)
+    draw.polygon(this.vertices, this.color.cachedValue, 1, outline)
   }
 }
 
@@ -300,14 +234,24 @@ class Circle implements AShape {
     this.radius = radius
     this.color = color
   }
-  draw(_dx: number, _dy: number, base: Base) {
-    if (!sameColor) ctx!.fillStyle = this.color.cachedValue
-    ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2)
-    line(
+  draw(dx: number, dy: number, θ: number) {
+    ctx.setTransform(1, 0, 0, 1, dx, dy)
+    draw.ellipse(
       this.centroid.x,
       this.centroid.y,
-      this.radius * Math.cos(base.dir),
-      this.radius * Math.sin(base.dir)
+      this.radius * 2,
+      this.radius * 2,
+      this.color.cachedValue,
+      2,
+      outline
+    )
+    draw.line(
+      this.centroid.x,
+      this.centroid.y,
+      this.radius * Math.cos(θ),
+      this.radius * Math.sin(θ),
+      0.5,
+      outline
     )
   }
 }
@@ -322,6 +266,18 @@ class Aabb {
     this.width = width
     this.height = height
     this.centroid = centroid
+  }
+  draw(base: Base) {
+    ctx.setTransform(
+      1,
+      0,
+      0,
+      1,
+      this.centroid.x + base.position.x + halfWidth,
+      this.centroid.y + base.position.y + halfHeight
+    )
+    draw.rect(-this.width / 2, -this.height / 2, this.width, this.height, rgba(128, 50))
+    draw.ellipse(0, 0, this.width, this.width, rgba(128, 50), 0, rgba(0, 0))
   }
 }
 
@@ -422,29 +378,16 @@ class PolygonHitbox extends Polygon implements AHitbox {
   }
   shallowUpdate(base: Base) {
     this.lastUpdate = "AABB"
-
     // check if rotation recalc neccessary
     if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
       this.centroid.rotate(base.dir)
     if (!displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
-    const aabbWidth = this.aabb.width
-    const aabbHeight = this.aabb.height
-
-    fill(128, 50)
-    stroke(128, 50)
-    pushMatrix()
-    translate(
-      this.centroid.x + base.position.x + halfWidth,
-      this.centroid.y + base.position.y + halfHeight
-    )
-    rect(-aabbWidth / 2, -aabbHeight / 2, aabbWidth, aabbHeight)
-    ellipse(0, 0, this.radius * 2, this.radius * 2)
+    this.aabb.draw(base)
   }
   narrowUpdate(base: Base) {
     if (this.lastUpdate !== "AABB") return
     this.lastUpdate = "SAT"
-
     this.transformedVertices = this.vertices.map((vertex) =>
       vertex.rotate(base.dir).add(base.position)
     )
@@ -527,18 +470,7 @@ class CircleHitbox extends Circle implements AHitbox {
       this.centroid.rotate(base.dir)
     if (!displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
-    const aabbWidth = this.aabb.width
-    const aabbHeight = this.aabb.height
-
-    fill(128, 50)
-    stroke(128, 50)
-    pushMatrix()
-    translate(
-      this.centroid.x + base.position.x + halfWidth,
-      this.centroid.y + base.position.y + halfHeight
-    )
-    rect(-aabbWidth / 2, -aabbHeight / 2, aabbWidth, aabbHeight)
-    ellipse(0, 0, this.radius * 2, this.radius * 2)
+    this.aabb.draw(base)
   }
   narrowUpdate() {
     return
@@ -633,17 +565,10 @@ class Base {
       )
       this.omega = random(-0.01, 0.01) * scale
     }
-
-    // if (focus === this.id) this.shape.color = new Color([110, 0.4, 1], "HSV")
-    // else
     this.shape.color = this.trueColor
   }
   draw() {
-    pushMatrix()
-    translate(this.position.x + halfWidth, this.position.y + height / 2)
-    if (this.shape.type !== "Circle") rotate(this.dir)
-    this.shape.draw(0, 0, this)
-    popMatrix()
+    this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir)
   }
   checkCollision(otherBase: Base) {
     const baseA = this
@@ -814,11 +739,8 @@ class Base {
     }
 
     for (const point of contactPoints) {
-      //pushMatrix()
-      //translate(halfWidth + point.x, halfHeight + point.y)
-      ctx?.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y)
-      ellipse(0, 0, 5, 5)
-      //popMatrix()
+      ctx.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y)
+      draw.ellipse(0, 0, 5, 5, rgba(100, 50))
     }
     if (!collisionImpulse) return
 
@@ -983,8 +905,7 @@ let KE = 0
 let lastTime = 0
 function drawLoop(timestamp: number) {
   if (ctx === null) throw "e"
-  matrices = [[1, 0, 0, 1, 0, 0]]
-  ctx!.resetTransform()
+  ctx.resetTransform()
   let dt = timestamp - lastTime
   lastTime = timestamp
   if (isNaN(dt)) dt = 0
@@ -998,11 +919,8 @@ function drawLoop(timestamp: number) {
   world.cellsChecked = 0
   ticksSinceInput++
   //background(255)
-  ctx.fillStyle = "#ffffff"
-  ctx.fillRect(0, 0, width, height)
+  draw.rect(0, 0, width, height, "#ffffff")
 
-  //fill(255, 0, 0)
-  ctx.fillStyle = "#ff0000"
   world.draw()
 
   Perf.getTime()
@@ -1067,25 +985,31 @@ function drawLoop(timestamp: number) {
 
   // draw them boxes
   for (const box of boxes) {
-    stroke(46)
-    ctx.resetTransform()
     ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    if (sameColor) fill(255, 120, 120)
     if (drawAsCircles) {
-      if (!sameColor) ctx.fillStyle = box.shape.color.cachedValue
       const diameter = box.hitbox.aabb.width
-      ellipse(
+      draw.ellipse(
         box.position.x + box.hitbox.centroid.x,
         box.position.y + box.hitbox.centroid.y,
         diameter,
-        diameter
+        diameter,
+        box.shape.color.cachedValue,
+        1,
+        outline
       )
     } else box.draw()
 
     ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
     ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    fill(211, 175, 55)
-    ellipse(box.position.x + box.hitbox.centroid.x, box.position.y + box.hitbox.centroid.y, 5, 5)
+    draw.ellipse(
+      box.position.x + box.hitbox.centroid.x,
+      box.position.y + box.hitbox.centroid.y,
+      5,
+      5,
+      rgba(211, 175, 55),
+      1,
+      outline
+    )
   }
   Perf.updateMetric("drawBoxes")
 
@@ -1133,18 +1057,15 @@ function drawLoop(timestamp: number) {
 
   const metricDisplayWidth =
     padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding
-  fill(0, 0, 0, 120)
   ctx.resetTransform()
-  pushMatrix()
   const metricCount = Object.keys(Perf.metrics).length
-  rect(
+  draw.rect(
     margin,
     margin,
     metricDisplayWidth,
-    padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding
+    padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding,
+    rgba(0, 120)
   )
-  fill(255, 255, 255)
-
   if (ticks % displayPeriod === 0) {
     const totalData = Perf.getMetricData("total")
     Perf.metrics.total.savedData = Object.assign({}, totalData)
@@ -1156,16 +1077,20 @@ function drawLoop(timestamp: number) {
 
   let dx, dy
   dy = dx = start
-  text("Key", dx, dy)
+  draw.text("Key", dx, dy)
   dx += keyWidth + columnGap
   for (const dataKey of dataToDisplay) {
-    text(dataKey[0].toUpperCase() + dataKey.slice(1), dx, dy)
+    draw.text(dataKey[0].toUpperCase() + dataKey.slice(1), dx, dy)
     dx += dataWidth + columnGap
   }
 
-  fill(255, 255, 255)
-  noStroke()
-  rect(start, start + rowHeight, dataToDisplay.length * (dataWidth + columnGap) + keyWidth, 3)
+  draw.rect(
+    start,
+    start + rowHeight,
+    dataToDisplay.length * (dataWidth + columnGap) + keyWidth,
+    3,
+    rgba(0, 120)
+  )
 
   //textFont(font, 24)
   ctx.font = "bold 24px Arial"
@@ -1178,11 +1103,7 @@ function drawLoop(timestamp: number) {
     let ddx = dx
     const metric = Perf.metrics[key].savedData
 
-    if (i % 2 === 0) {
-      fill(0, 0, 0, 50)
-      rect(margin, dy, metricDisplayWidth, rowHeight)
-      fill(255)
-    }
+    if (i % 2 === 0) draw.rect(margin, dy, metricDisplayWidth, rowHeight, rgba(0, 50))
 
     let formattedKey = []
     for (let i = 0; i < key.length; i++) {
@@ -1195,14 +1116,14 @@ function drawLoop(timestamp: number) {
       else formattedKey.push(character)
     }
 
-    text(`${formattedKey.join("")}:`, start, dy)
+    draw.text(`${formattedKey.join("")}:`, start, dy)
 
     for (const dataKey of dataToDisplay) {
       let data = metric[dataKey]
       const unit = dataKey === "percentage" ? "%" : "ms"
       data = isNaN(data) ? displayPeriod - ticks / dt : `${data.toFixed(3)} ${unit}`
 
-      text(data, ddx, dy)
+      draw.text(data, ddx, dy)
       ddx += dataWidth + columnGap
     }
 
@@ -1210,29 +1131,26 @@ function drawLoop(timestamp: number) {
     i++
   }
 
-  fill(0, 0, 0, 120)
-  stroke(0)
   const counterDisplayHeight = padding + (countMetrics.length / 2) * (rowHeight + rowGap) + padding
   const counterDisplayWidth = padding + keyWidth + columnGap + dataWidth + padding
-  rect(margin, height - margin - counterDisplayHeight, counterDisplayWidth, counterDisplayHeight)
-  fill(255)
+  draw.rect(
+    margin,
+    height - margin - counterDisplayHeight,
+    counterDisplayWidth,
+    counterDisplayHeight,
+    rgba(0, 120)
+  )
   dy = height - margin - counterDisplayHeight + padding
   for (let i = 0; i < countMetrics.length; i += 2) {
-    if (i % 4 === 0) {
-      fill(0, 0, 0, 50)
-      rect(margin, dy, counterDisplayWidth, rowHeight)
-      fill(255)
-    }
-    text(countMetrics[i] + ":", start, dy)
-    text(countMetrics[i + 1] + "", start + keyWidth + columnGap, dy)
+    if (i % 4 === 0) draw.rect(margin, dy, counterDisplayWidth, rowHeight, rgba(0, 0, 0, 50))
+    draw.text(countMetrics[i] + ":", start, dy)
+    draw.text(countMetrics[i + 1] + "", start + keyWidth + columnGap, dy)
     dy += rowHeight + rowGap
   }
-  popMatrix()
 
   ticks += 1
 
   requestAnimationFrame(drawLoop)
 }
 
-// Start the loop
 requestAnimationFrame(drawLoop)
