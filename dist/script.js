@@ -2,8 +2,7 @@ import { sq, constrain, random, rgba } from "./Utils/math.js";
 import { shift, zipWith, zipShift } from "./Utils/arrays.js";
 import { Vector } from "./Data/vector.js";
 import { Color } from "./Data/color.js";
-const outline = rgba(0);
-import { canvas, draw, ctx } from "./Data/world.js";
+import { canvas, draw, ctx, outline } from "./Data/world.js";
 import * as Settings from "./Data/world.js";
 const [width, height] = [canvas.width, canvas.height];
 const [halfWidth, halfHeight] = [width / 2, height / 2];
@@ -11,62 +10,7 @@ let idCount = 0;
 const newid = () => idCount++;
 import { SpatialHashGrid } from "./Data/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw);
-function regularPolyVerts(x, y, radius, sideCount) {
-    const vertices = [];
-    for (let i = 0; i < sideCount; i++)
-        vertices.push(new Vector(x + radius * Math.cos((2 * Math.PI * i) / sideCount), y + radius * Math.sin((2 * Math.PI * i) / sideCount)));
-    return vertices;
-}
-function polyVerts(...inputs) {
-    let vertices = [];
-    for (let i = 0; i < inputs.length; i += 2)
-        vertices.push(new Vector(inputs[i], inputs[i + 1]));
-    return vertices;
-}
-class AShape {
-}
-class Polygon {
-    type;
-    centroid;
-    color;
-    radius;
-    vertices;
-    constructor(vertices, color = new Color([0, 0, 0, 0])) {
-        this.type = "Polygon";
-        this.vertices = vertices;
-        this.color = color;
-        let maxSqRadius = -Infinity;
-        this.centroid = this.vertices
-            .reduce((sum, vertex) => {
-            maxSqRadius = Math.max(vertex.getSqMag(), maxSqRadius);
-            return sum.add(vertex);
-        }, new Vector(0, 0))
-            .divide(this.vertices.length);
-        this.radius = Math.sqrt(maxSqRadius);
-    }
-    draw(dx, dy, θ) {
-        ctx.setTransform(1, 0, 0, 1, dx, dy);
-        ctx.transform(Math.cos(θ), Math.sin(θ), -Math.sin(θ), Math.cos(θ), 0, 0);
-        draw.polygon(this.vertices, this.color.cachedValue, 1, outline);
-    }
-}
-class Circle {
-    type;
-    centroid;
-    color;
-    radius;
-    constructor(radius, color = new Color([0, 0, 0, 0]), centroid = new Vector(0, 0)) {
-        this.type = "Circle";
-        this.centroid = centroid;
-        this.radius = radius;
-        this.color = color;
-    }
-    draw(dx, dy, θ) {
-        ctx.setTransform(1, 0, 0, 1, dx, dy);
-        draw.ellipse(this.centroid.x, this.centroid.y, this.radius * 2, this.radius * 2, this.color.cachedValue, 2, outline);
-        draw.line(this.centroid.x, this.centroid.y, this.radius * Math.cos(θ), this.radius * Math.sin(θ), 0.5, outline);
-    }
-}
+import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
 class Aabb {
     width;
     height;

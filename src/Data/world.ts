@@ -1,5 +1,7 @@
 import { Draw } from "../Utils/drawing.js"
+import { rgba } from "../Utils/math.js"
 
+export const outline = rgba(0)
 export const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
 export const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
 if (ctx === null) throw "e"

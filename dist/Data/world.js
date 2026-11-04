@@ -1,4 +1,6 @@
 import { Draw } from "../Utils/drawing.js";
+import { rgba } from "../Utils/math.js";
+export const outline = rgba(0);
 export const canvas = document.getElementById("gameCanvas");
 export const ctx = canvas.getContext("2d");
 if (ctx === null)
