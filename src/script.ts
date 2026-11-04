@@ -341,7 +341,7 @@ function drawLoop(timestamp: number) {
   )
 
   //textFont(font, 24)
-  ctx.font = "bold 24px Arial"
+  ctx.font = "normal 24px Arial"
 
   dx = start + keyWidth + columnGap
   dy += rowHeight + initialRowGap

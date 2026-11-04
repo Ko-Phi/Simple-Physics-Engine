@@ -238,7 +238,7 @@ function drawLoop(timestamp) {
     }
     draw.rect(start, start + rowHeight, dataToDisplay.length * (dataWidth + columnGap) + keyWidth, 3, rgba(0, 120));
     //textFont(font, 24)
-    ctx.font = "bold 24px Arial";
+    ctx.font = "normal 24px Arial";
     dx = start + keyWidth + columnGap;
     dy += rowHeight + initialRowGap;
     let i = 0;
