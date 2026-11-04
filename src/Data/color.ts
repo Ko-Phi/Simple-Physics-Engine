@@ -1,4 +1,4 @@
-import type { NArray } from "../utils"
+import type { NArray } from "../Utils/arrays.js"
 type ColorModel = "HSV" | "RGB"
 export class Color {
   channels: NArray<number, 3>

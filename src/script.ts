@@ -1,7 +1,7 @@
-import { sq, constrain, random, shift, zipWith, zipShift } from "./utils.js"
+import { sq, constrain, random, rgba } from "./Utils/math.js"
+import { shift, zipWith, zipShift, type NArray } from "./Utils/arrays.js"
 import { Vector } from "./Data/vector.js"
 import { Color } from "./Data/color.js"
-import type { NArray } from "./utils.js"
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
 const ctx = canvas.getContext("2d")
@@ -40,15 +40,6 @@ const sameColor = false // shapes drawn with the same color. Minor performance g
 
 let idCount = 0
 const newid = () => idCount++
-
-const rgba = (...inputs: number[]): string => {
-  let channels
-  if (inputs.length === 1) channels = [inputs[0], inputs[0], inputs[0], 255]
-  else if (inputs.length === 2) channels = [inputs[0], inputs[0], inputs[0], inputs[1]]
-  else if (inputs.length === 3) channels = inputs.concat(255)
-  else channels = inputs
-  return "#" + channels.map((c) => c.toString(16).padStart(2, "0")).join("")
-}
 
 let matrices: Array<NArray<number, 6>> = [[1, 0, 0, 1, 0, 0]]
 const popMatrix = () => {

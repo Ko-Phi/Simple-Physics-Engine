@@ -1,4 +1,4 @@
-import { sq, rounD } from "../utils.js"
+import { sq, rounD } from "../Utils/math.js"
 type VectorInit = "component" | "dirMag"
 export class Vector {
   x: number

@@ -1,4 +1,4 @@
-import { sq, rounD } from "../utils.js";
+import { sq, rounD } from "../Utils/math.js";
 export class Vector {
     x;
     y;

@@ -1,4 +1,5 @@
-import { sq, constrain, random, shift, zipWith, zipShift } from "./utils.js";
+import { sq, constrain, random, rgba } from "./Utils/math.js";
+import { shift, zipWith, zipShift } from "./Utils/arrays.js";
 import { Vector } from "./Data/vector.js";
 import { Color } from "./Data/color.js";
 const canvas = document.getElementById("gameCanvas");
@@ -30,18 +31,6 @@ const displayGridCheck = false; // checked grids are highlighted. Very performan
 const sameColor = false; // shapes drawn with the same color. Minor performance gain
 let idCount = 0;
 const newid = () => idCount++;
-const rgba = (...inputs) => {
-    let channels;
-    if (inputs.length === 1)
-        channels = [inputs[0], inputs[0], inputs[0], 255];
-    else if (inputs.length === 2)
-        channels = [inputs[0], inputs[0], inputs[0], inputs[1]];
-    else if (inputs.length === 3)
-        channels = inputs.concat(255);
-    else
-        channels = inputs;
-    return "#" + channels.map((c) => c.toString(16).padStart(2, "0")).join("");
-};
 let matrices = [[1, 0, 0, 1, 0, 0]];
 const popMatrix = () => {
     matrices.pop();
