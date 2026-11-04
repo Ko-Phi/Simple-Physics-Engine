@@ -1,4 +1,3 @@
-import { rgba } from "./math.js"
 import { Vector } from "../Data/vector.js"
 
 export class Draw {

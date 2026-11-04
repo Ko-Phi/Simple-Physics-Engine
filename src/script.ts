@@ -2,166 +2,21 @@ import { sq, constrain, random, rgba } from "./Utils/math.js"
 import { shift, zipWith, zipShift } from "./Utils/arrays.js"
 import { Vector } from "./Data/vector.js"
 import { Color } from "./Data/color.js"
-import { Draw } from "./Utils/drawing.js"
-
-const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
-const ctx = canvas.getContext("2d") as CanvasRenderingContext2D
-if (ctx === null) throw "e"
-const draw = new Draw(ctx)
 
 const outline = rgba(0)
+
+import { canvas, draw, ctx } from "./Data/world.js"
+import * as Settings from "./Data/world.js"
 
 const [width, height] = [canvas.width, canvas.height]
 const [halfWidth, halfHeight] = [width / 2, height / 2]
 
-const period = 16.67
-
-const initialVelocity = true // objects begin with an intial velocity
-const periodicVelocityShifts = false // velocity randomized periodically
-const velocityMagnitude = 3 // alters the magnitude of said velocity
-
-const collisionImpulse = true // objects bounce off each other on collision
-const restitution = 1 // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
-const mu = 0 // add friction (should be quite small)
-
-const allCircles = false // all shapes are circles. Increases performance as well
-const allPolys = false // all shapes are polygons. Slightly more performance intensive
-const gridSize = 25 // influences hashgrid check. Can queak for minor performance improvement
-
-// Box Count
-const insertCount: number = 100
-const scale = 20
-const scaleVariance = 0
-
-// Visuals
-// 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
-const drawAsCircles = false // shapes drawn as circles. Increases performance
-const displayAABB = false // aabbs drawn. Uses rect() so not very good for performance
-const displayGridCheck = false // checked grids are highlighted. Very performance intensive
-
 let idCount = 0
 const newid = () => idCount++
 
-class SpatialHashGrid {
-  cellsChecked
-  grid: Map<string, any>
-  cellSize: number
-  queryIds: number
-  constructor(cellSize: number) {
-    this.grid = new Map()
-    this.cellSize = cellSize
-    this.queryIds = 0
-    this.cellsChecked = 0
-  }
-  key = (x: number, y: number): string => x + "," + y
-  getIndex = (x: number, y: number): Vector =>
-    new Vector(...([x, y].map((c) => Math.floor(c / this.cellSize)) as [number, number]))
-  newClient(client: Base) {
-    client.indices = []
-    this.insert(client)
-    this.queryIds = -1
-    return client
-  }
-  insert(client: Base) {
-    const x = client.position.x + client.hitbox.aabb.centroid.x
-    const y = client.position.y + client.hitbox.aabb.centroid.y
-    const w = client.hitbox.aabb.width
-    const h = client.hitbox.aabb.height
+import { SpatialHashGrid } from "./Data/spatialHashGrid.js"
 
-    // get the client's span
-    const i1 = this.getIndex(x - w / 2, y - h / 2)
-    const i2 = this.getIndex(x + w / 2, y + h / 2)
-    client.indices = [i1, i2]
-
-    // iterate over span, adding client to each cell
-    for (let x = i1.x; x <= i2.x; ++x) {
-      for (let y = i1.y; y <= i2.y; ++y) {
-        const key = this.key(x, y)
-        if (!this.grid.has(key)) this.grid.set(key, new Set())
-        this.grid.get(key).add(client)
-      }
-    }
-  }
-  queryGrid(position: Vector, w: number, h: number) {
-    const [x, y] = [position.x, position.y]
-
-    // get span of checked area
-    const i1 = this.getIndex(x - w / 2, y - h / 2)
-    const i2 = this.getIndex(x + w / 2, y + h / 2)
-
-    // iterate over spanned area for clients
-    if (displayGridCheck) ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    let clients = []
-    const queryId = this.queryIds++
-    for (let x = i1.x; x <= i2.x; ++x) {
-      for (let y = i1.y; y <= i2.y; ++y) {
-        let key = this.key(x, y)
-        if (!this.grid.has(key)) continue
-        for (const client of this.grid.get(key)) {
-          if (client.queryId !== queryId) {
-            client.queryId = queryId
-            clients.push(client)
-          }
-        }
-        if (displayGridCheck)
-          draw.rect(
-            x * this.cellSize,
-            y * this.cellSize,
-            this.cellSize,
-            this.cellSize,
-            rgba(100, 15)
-          )
-        this.cellsChecked++
-      }
-    }
-    return clients
-  }
-  remove(client: Base) {
-    const i1 = client.indices[0]
-    const i2 = client.indices[1]
-    // iterate over client's span, removing it from each cell
-    for (let x = i1.x; x <= i2.x; ++x) {
-      for (let y = i1.y; y <= i2.y; ++y) {
-        const key = this.key(x, y)
-        const cell = this.grid.get(key)
-        cell.delete(client)
-        if (cell.size === 0) this.grid.delete(key)
-      }
-    }
-  }
-  update(client: Base) {
-    const x = client.position.x + client.hitbox.aabb.centroid.x
-    const y = client.position.y + client.hitbox.aabb.centroid.y
-    const w = client.hitbox.aabb.width
-    const h = client.hitbox.aabb.height
-
-    // get the client's span
-    const i1 = this.getIndex(x - w / 2, y - h / 2)
-    const i2 = this.getIndex(x + w / 2, y + h / 2)
-    // check for change in grid position
-    if (!i1.equalTo(client.indices[0]) || !i2.equalTo(client.indices[1])) {
-      this.remove(client)
-      this.insert(client)
-    }
-  }
-  draw() {
-    ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    for (
-      let x = Math.ceil(-width / this.cellSize) * this.cellSize;
-      x <= halfWidth;
-      x += this.cellSize
-    )
-      draw.line(x, height, x, -height, 1, rgba(204))
-    for (
-      let y = Math.ceil(-height / this.cellSize) * this.cellSize;
-      y <= halfHeight;
-      y += this.cellSize
-    )
-      draw.line(width, y, -width, y, 1, rgba(204))
-  }
-}
-
-const world = new SpatialHashGrid(gridSize)
+const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw)
 
 function regularPolyVerts(x: number, y: number, radius: number, sideCount: number) {
   const vertices = []
@@ -381,7 +236,7 @@ class PolygonHitbox extends Polygon implements AHitbox {
     // check if rotation recalc neccessary
     if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
       this.centroid.rotate(base.dir)
-    if (!displayAABB) return
+    if (!Settings.displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
     this.aabb.draw(base)
   }
@@ -468,7 +323,7 @@ class CircleHitbox extends Circle implements AHitbox {
     // check if rotation recalc neccessary
     if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
       this.centroid.rotate(base.dir)
-    if (!displayAABB) return
+    if (!Settings.displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
     this.aabb.draw(base)
   }
@@ -491,7 +346,7 @@ class CircleHitbox extends Circle implements AHitbox {
 type Hitbox = PolygonHitbox | CircleHitbox
 
 // temp
-class Base {
+export class Base {
   id: number
   indices: Vector[]
 
@@ -518,10 +373,10 @@ class Base {
     else this.hitbox = new CircleHitbox(shape, this)
 
     this.axesBuffer = []
-    if (initialVelocity) {
+    if (Settings.initialVelocity) {
       this.velocity = new Vector(
         random(0, 2 * Math.PI),
-        velocityMagnitude * random(0.75, 1.25),
+        Settings.velocityMagnitude * random(0.75, 1.25),
         "dirMag"
       )
       this.omega = random(-0.15, 0.15)
@@ -543,11 +398,12 @@ class Base {
   }
   update(dt: number) {
     this.ticks++
-    this.position = this.position.add(this.velocity.scale(dt / period))
-    this.dir += this.omega * (dt / period)
+    this.position = this.position.add(this.velocity.scale(dt / Settings.period))
+    this.dir += this.omega * (dt / Settings.period)
 
     const velocity = this.velocity.getMag()
-    if (velocity > mu) this.velocity = this.velocity.subtract(this.velocity.scale(mu / velocity))
+    if (velocity > Settings.mu)
+      this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity))
     else this.velocity = new Vector(0, 0)
 
     if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2) {
@@ -557,13 +413,13 @@ class Base {
       this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2)
     }
 
-    if (this.ticks % (60 * dt) === 0 && periodicVelocityShifts) {
+    if (this.ticks % (60 * dt) === 0 && Settings.periodicVelocityShifts) {
       this.velocity = new Vector(
         random(0, 2 * Math.PI),
-        velocityMagnitude * random(0.75, 1.25),
+        Settings.velocityMagnitude * random(0.75, 1.25),
         "dirMag"
       )
-      this.omega = random(-0.01, 0.01) * scale
+      this.omega = random(-0.01, 0.01) * Settings.scale
     }
     this.shape.color = this.trueColor
   }
@@ -742,7 +598,7 @@ class Base {
       ctx.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y)
       draw.ellipse(0, 0, 5, 5, rgba(100, 50))
     }
-    if (!collisionImpulse) return
+    if (!Settings.collisionImpulse) return
 
     for (const contactPoint of contactPoints) {
       const vectorAC = contactPoint.subtract(baseA.position)
@@ -755,7 +611,7 @@ class Base {
       const inertiaA = baseA.hitbox.momentOfInertia
       const inertiaB = baseB.hitbox.momentOfInertia
       const impulseScalar =
-        velocityAB.scale(-1 - restitution).dotProduct(axis) /
+        velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
         (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +
           sq(vectorAC.crossProduct(axis)) / inertiaA +
           sq(vectorBC.crossProduct(axis)) / inertiaB)
@@ -770,22 +626,26 @@ class Base {
 }
 
 let boxes: Base[] = []
-for (let i = 0; i < insertCount; i++) {
+for (let i = 0; i < Settings.insertCount; i++) {
   let shape =
-    (Math.ceil(random(0, 5)) > 3 && !allCircles) || allPolys
+    (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
       ? new Polygon(
           regularPolyVerts(
             0,
             0,
-            Math.ceil(scale * random(1 - scaleVariance, 1 + scaleVariance)),
+            Math.ceil(
+              Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance)
+            ),
             Math.ceil(random(2, 7))
           ),
           new Color([255, 0, 0])
         )
-      : new Circle(Math.ceil(scale * random(0.9, 1.1)), new Color([255, 0, 0]))
+      : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), new Color([255, 0, 0]))
   if (random(0, 5) > 4) {
-    let hWidth = scale * random(1 - scaleVariance, 1 + scaleVariance) * random(2, 4)
-    let hHeight = scale * random(1 - scaleVariance, 1 + scaleVariance) * 0.5
+    let hWidth =
+      Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * random(2, 4)
+    let hHeight =
+      Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5
     shape = new Polygon(
       polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight),
       new Color([255, 0, 0])
@@ -799,7 +659,7 @@ for (let i = 0; i < insertCount; i++) {
     )
   )
 }
-if (insertCount === 0)
+if (Settings.insertCount === 0)
   boxes.push(
     new Base(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)),
     new Base(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))),
@@ -986,7 +846,7 @@ function drawLoop(timestamp: number) {
   // draw them boxes
   for (const box of boxes) {
     ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    if (drawAsCircles) {
+    if (Settings.drawAsCircles) {
       const diameter = box.hitbox.aabb.width
       draw.ellipse(
         box.position.x + box.hitbox.centroid.x,
@@ -1022,7 +882,7 @@ function drawLoop(timestamp: number) {
 
   Perf.getTotal()
 
-  const totalCells = (halfWidth * 2 * (halfHeight * 2)) / gridSize ** 2
+  const totalCells = (halfWidth * 2 * (halfHeight * 2)) / Settings.gridSize ** 2
   const countMetrics = [
     "Cells Filled",
     world.grid.size + " / " + totalCells,
