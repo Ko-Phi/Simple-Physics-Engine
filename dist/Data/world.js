@@ -6,6 +6,10 @@ export const ctx = canvas.getContext("2d");
 if (ctx === null)
     throw "e";
 export const draw = new Draw(ctx);
+export const [width, height] = [canvas.width, canvas.height];
+export const [halfWidth, halfHeight] = [width / 2, height / 2];
+let idCount = 0;
+export const newid = () => idCount++;
 export const period = 16.67;
 export const initialVelocity = true; // objects begin with an intial velocity
 export const periodicVelocityShifts = false; // velocity randomized periodically

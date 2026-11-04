@@ -2,12 +2,9 @@ import { sq, constrain, random, rgba } from "./Utils/math.js";
 import { shift, zipWith, zipShift } from "./Utils/arrays.js";
 import { Vector } from "./Data/vector.js";
 import { Color } from "./Data/color.js";
-import { canvas, draw, ctx, outline } from "./Data/world.js";
+import { canvas, draw, ctx, outline, width, height, halfHeight, halfWidth } from "./Data/world.js";
 import * as Settings from "./Data/world.js";
-const [width, height] = [canvas.width, canvas.height];
-const [halfWidth, halfHeight] = [width / 2, height / 2];
-let idCount = 0;
-const newid = () => idCount++;
+import { newid } from "./Data/world.js";
 import { SpatialHashGrid } from "./Data/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw);
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
@@ -20,8 +17,8 @@ class Aabb {
         this.height = height;
         this.centroid = centroid;
     }
-    draw(base) {
-        ctx.setTransform(1, 0, 0, 1, this.centroid.x + base.position.x + halfWidth, this.centroid.y + base.position.y + halfHeight);
+    draw(position) {
+        ctx.setTransform(1, 0, 0, 1, this.centroid.x + position.x + halfWidth, this.centroid.y + position.y + halfHeight);
         draw.rect(-this.width / 2, -this.height / 2, this.width, this.height, rgba(128, 50));
         draw.ellipse(0, 0, this.width, this.width, rgba(128, 50), 0, rgba(0, 0));
     }
@@ -69,24 +66,24 @@ class PolygonHitbox extends Polygon {
             Math.sqrt(this.vertices.reduce((maxSqRadius, vertex) => Math.max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius), -Infinity));
         // Better for more uniform shapes (this scenario)
         this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
-        this.shallowUpdate(base);
+        this.shallowUpdate(base.position, base.dir);
     }
-    shallowUpdate(base) {
+    shallowUpdate(position, dir) {
         this.lastUpdate = "AABB";
         // check if rotation recalc neccessary
-        if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
-            this.centroid.rotate(base.dir);
+        if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            this.centroid.rotate(dir);
         if (!Settings.displayAABB)
             return;
         // display AABB (note aabb centroid points to base centroid)
-        this.aabb.draw(base);
+        this.aabb.draw(position);
     }
-    narrowUpdate(base) {
+    narrowUpdate(position, dir) {
         if (this.lastUpdate !== "AABB")
             return;
         this.lastUpdate = "SAT";
-        this.transformedVertices = this.vertices.map((vertex) => vertex.rotate(base.dir).add(base.position));
-        this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(base.dir));
+        this.transformedVertices = this.vertices.map((vertex) => vertex.rotate(dir).add(position));
+        this.normals = this.cachedNormals.map((cachedNormal) => cachedNormal.rotate(dir));
     }
     project(axis) {
         const projections = this.transformedVertices.map((vertex) => vertex.dotProduct(axis));
@@ -95,10 +92,10 @@ class PolygonHitbox extends Polygon {
             max: Math.max(...projections),
         };
     }
-    closestPointToCentroidOf(base) {
+    closestPointToCentroidOf(position) {
         let closestPoint = new Vector(0, 0);
         let minDistanceSquared = Infinity;
-        const centroid = base.position.add(base.hitbox.centroid);
+        const centroid = position.add(this.centroid);
         // loop over this object's edges
         zipShift(this.transformedVertices).forEach(([vertexA, vertexB]) => {
             // get closest point on side
@@ -146,23 +143,23 @@ class CircleHitbox extends Circle {
         this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.cachedCentroid = this.centroid.copy();
         this.windingOrder = "CW";
-        this.shallowUpdate(base);
+        this.shallowUpdate(base.position, base.dir);
     }
-    shallowUpdate(base) {
+    shallowUpdate(position, dir) {
         this.lastUpdate = "AABB";
         // check if rotation recalc neccessary
-        if (base.dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
-            this.centroid.rotate(base.dir);
+        if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+            this.centroid.rotate(dir);
         if (!Settings.displayAABB)
             return;
         // display AABB (note aabb centroid points to base centroid)
-        this.aabb.draw(base);
+        this.aabb.draw(position);
     }
     narrowUpdate() {
         return;
     }
-    project(axis, base) {
-        const centroid = this.centroid.add(base.position);
+    project(axis, position) {
+        const centroid = this.centroid.add(position);
         const projection = axis.dotProduct(centroid);
         return {
             min: projection - this.radius,
@@ -284,8 +281,8 @@ export class Base {
         let minNormal = axes[0];
         for (const axis of axes) {
             // project each hitbox's vertices
-            const projA = baseA.hitbox.project(axis, baseA);
-            const projB = baseB.hitbox.project(axis, baseB);
+            const projA = baseA.hitbox.project(axis, baseA.position);
+            const projB = baseB.hitbox.project(axis, baseB.position);
             // check if seperate
             if (projA.max < projB.min || projB.max < projA.min)
                 return { colliding: false };
@@ -304,11 +301,11 @@ export class Base {
             else
                 [circleBase, otherBase] = [baseB, baseA];
             const centroid = circleBase.position.add(circleBase.hitbox.centroid);
-            const closestPoint = otherBase.hitbox.closestPointToCentroidOf(circleBase);
+            const closestPoint = otherBase.hitbox.closestPointToCentroidOf(circleBase.position);
             const axis = closestPoint.subtract(centroid).normalize();
             // project each hitbox's vertices
-            const projA = baseA.hitbox.project(axis, baseA);
-            const projB = baseB.hitbox.project(axis, baseB);
+            const projA = baseA.hitbox.project(axis, baseA.position);
+            const projB = baseB.hitbox.project(axis, baseB.position);
             // check if seperate
             if (projA.max < projB.min || projB.max < projA.min)
                 return { colliding: false };
@@ -387,7 +384,7 @@ export class Base {
                 });
             });
             if (contactPoints.length === 0)
-                contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB));
+                contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB.position));
         }
         else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
             let circleBase, otherBase;
@@ -395,7 +392,7 @@ export class Base {
                 [circleBase, otherBase] = [baseA, baseB];
             else
                 [circleBase, otherBase] = [baseB, baseA];
-            contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase));
+            contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase.position));
         }
         else if (collisionType === "Circle-Circle") {
             const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize();
@@ -537,7 +534,7 @@ function drawLoop(timestamp) {
                 (box.hitbox.momentOfInertia * sq(box.omega)) / 2;
         box.update(dt);
         Perf.updateMetric("boxUpdate");
-        box.hitbox.shallowUpdate(box);
+        box.hitbox.shallowUpdate(box.position, box.dir);
         Perf.updateMetric("aabbUpdate");
         world.update(box);
         Perf.updateMetric("gridUpdate");
@@ -568,8 +565,8 @@ function drawLoop(timestamp) {
                 continue;
             Perf.updateMetric("priorCheck");
             // narrow update before full check
-            box.hitbox.narrowUpdate(box);
-            client.hitbox.narrowUpdate(client);
+            box.hitbox.narrowUpdate(box.position, box.dir);
+            client.hitbox.narrowUpdate(client.position, client.dir);
             Perf.updateMetric("hitboxUpdate");
             const collision = box.checkCollision(client);
             Perf.updateMetric("satCheck");
