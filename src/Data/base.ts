@@ -4,7 +4,7 @@ import { random, sq, rgba, constrain } from "../Utils/math.js"
 import { Vector } from "./vector.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
-import { Collidable, CircleHitbox, PolygonHitbox } from "./hitbox.js"
+import { Collidable, CircleHitbox, PolygonHitbox } from "./collisions.js"
 
 export class Base extends Collidable {
   id: number
