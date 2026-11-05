@@ -145,7 +145,7 @@ export class Base {
         }
         for (const point of contactPoints) {
             ctx.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y);
-            draw.ellipse(0, 0, 5, 5, rgba(100, 50));
+            draw.ellipse(0, 0, 25, 25, rgba(100, 50));
         }
         if (!Settings.collisionImpulse)
             return;

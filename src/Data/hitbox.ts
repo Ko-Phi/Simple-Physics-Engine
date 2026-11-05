@@ -5,7 +5,9 @@ import { draw, ctx, halfHeight, halfWidth } from "../Data/world.js"
 import * as Settings from "../Data/world.js"
 import { rgba, sq, constrain } from "../Utils/math.js"
 
-type Collision = { colliding: false } | { colliding: true; axis: Vector; overlap: number }
+type Collision = { colliding: true; axis: Vector; overlap: number }
+type Seperation = { colliding: false }
+type PossibleCollision = Collision | Seperation
 
 export class Aabb {
   width: number
@@ -53,7 +55,11 @@ export abstract class AHitbox {
   abstract narrowUpdate: (position: Vector, dir: number) => void
   abstract project: (axis: Vector, position: Vector) => { min: number; max: number }
   abstract closestPointToCentroidOf: (position: Vector) => Vector
-  abstract checkCollision: (hitboxB: Hitbox, positionA: Vector, positionB: Vector) => Collision
+  abstract checkCollision: (
+    hitboxB: Hitbox,
+    positionA: Vector,
+    positionB: Vector
+  ) => PossibleCollision
 }
 
 export class PolygonHitbox extends Polygon implements AHitbox {
@@ -170,64 +176,41 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     })
     return closestPoint
   }
-  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): Collision {
+  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): PossibleCollision {
     const baseA = this
     const tCentroidA = baseA.centroid.add(positionA)
     const tCentroidB = baseB.centroid.add(positionB)
 
-    const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals]
     // common seperation axis first
+    const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals]
 
-    // Polygon-Polygon / Circle-Polygon Test
-    // project each hitbox on each axis, checking for seperation
-    let minOverlap = Infinity
-    let minNormal: Vector = axes[0]
+    const collisions: PossibleCollision[] = []
+
     for (const axis of axes) {
-      // project each hitbox's vertices
-      const projA = baseA.project(axis, positionA)
-      const projB = baseB.project(axis, positionB)
-
-      // check if seperate
-      if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
-
-      const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-      if (overlap < minOverlap) {
-        minOverlap = overlap
-        minNormal = axis
-      }
+      collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB))
     }
 
     // Circle-Polygon Edge Case
     if (baseB.type === "Circle") {
-      // get closest point on edge and add to normals
-      const centroid = positionB.add(baseB.centroid)
-
-      const closestPoint = baseA.closestPointToCentroidOf(positionB)
-      const axis = closestPoint.subtract(centroid).normalize()
-
-      // project each hitbox's vertices
-      const projA = baseA.project(axis, positionA)
-      const projB = baseB.project(axis, positionB)
-
-      // check if seperate
-      if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
-
-      const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-      if (overlap < minOverlap) {
-        minOverlap = overlap
-        minNormal = axis
-      }
+      collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB))
     }
 
     // reorient axis when neccessary
-    const direction = tCentroidB.subtract(tCentroidA)
-    if (minNormal.dotProduct(direction) < 0) minNormal = minNormal.negate()
+    const min = collisions.reduce((prev, curr) =>
+      prev.colliding === false
+        ? prev
+        : curr.colliding === false
+          ? curr
+          : curr.overlap < prev.overlap
+            ? curr
+            : prev
+    )
+    if (min.colliding === false) return min
 
-    return {
-      colliding: true,
-      axis: minNormal,
-      overlap: minOverlap,
-    }
+    const direction = tCentroidB.subtract(tCentroidA)
+    if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
+
+    return min
   }
 }
 
@@ -293,16 +276,13 @@ export class CircleHitbox extends Circle implements AHitbox {
   closestPointToCentroidOf(): Vector {
     throw "Uncalleable"
   }
-  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): Collision {
+  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): PossibleCollision {
     const baseA = this
     const tCentroidA = baseA.centroid.add(positionA)
     const tCentroidB = baseB.centroid.add(positionB)
 
-    const axes = []
     // common seperation axis first
-    axes.push(tCentroidB.subtract(tCentroidA).normalize())
-    for (const normal of baseA.normals) axes.push(normal)
-    for (const normal of baseB.normals) axes.push(normal)
+    const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals]
 
     // Circle-Circle test
     if (baseA.type === baseB.type && baseA.type === "Circle") {
@@ -324,61 +304,52 @@ export class CircleHitbox extends Circle implements AHitbox {
       }
     }
 
-    // Polygon-Polygon / Circle-Polygon Test
-    // project each hitbox on each axis, checking for seperation
-    let minOverlap = Infinity
-    let minNormal: Vector = axes[0]
+    const collisions: PossibleCollision[] = []
+
     for (const axis of axes) {
-      // project each hitbox's vertices
-      const projA = baseA.project(axis, positionA)
-      const projB = baseB.project(axis, positionB)
-
-      // check if seperate
-      if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
-
-      const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-      if (overlap < minOverlap) {
-        minOverlap = overlap
-        minNormal = axis
-      }
+      collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB))
     }
 
     // Circle-Polygon Edge Case
     if (baseB.type === "Polygon") {
-      // get closest point on edge and add to normals
-      let [circle, positionC, polygon] =
-        baseA.type === "Circle" ? [baseA, positionA, baseB] : [baseB, positionB, baseA]
-      const centroid = positionC.add(circle.centroid)
-
-      const closestPoint = polygon.closestPointToCentroidOf(positionC)
-      const axis = closestPoint.subtract(centroid).normalize()
-
-      // project each hitbox's vertices
-      const projA = baseA.project(axis, positionA)
-      const projB = baseB.project(axis, positionB)
-
-      // check if seperate
-      if (projA.max < projB.min || projB.max < projA.min) {
-        return { colliding: false }
-      }
-
-      const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-      if (overlap < minOverlap) {
-        minOverlap = overlap
-        minNormal = axis
-      }
+      collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB))
     }
 
     // reorient axis when neccessary
-    const direction = tCentroidB.subtract(tCentroidA)
-    if (minNormal.dotProduct(direction) < 0) minNormal = minNormal.negate()
+    const min = collisions.reduce((prev, curr) =>
+      prev.colliding === false
+        ? prev
+        : curr.colliding === false
+          ? curr
+          : curr.overlap < prev.overlap
+            ? curr
+            : prev
+    )
+    if (min.colliding === false) return min
 
-    return {
-      colliding: true,
-      axis: minNormal,
-      overlap: minOverlap,
-    }
+    const direction = tCentroidB.subtract(tCentroidA)
+    if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
+
+    return min
   }
+}
+
+function projectCheck(
+  axis: Vector,
+  baseA: Hitbox,
+  positionA: Vector,
+  baseB: Hitbox,
+  positionB: Vector
+): PossibleCollision {
+  // project each hitbox's vertices
+  const projA = baseA.project(axis, positionA)
+  const projB = baseB.project(axis, positionB)
+
+  // check if seperate
+  if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
+
+  const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
+  return { colliding: true, overlap: overlap, axis: axis }
 }
 
 function circlePolygonCheck(
@@ -386,7 +357,7 @@ function circlePolygonCheck(
   positionA: Vector,
   baseB: Hitbox,
   positionB: Vector
-): Collision {
+): PossibleCollision {
   // get closest point on edge and add to normals
   let [circle, positionC, polygon] =
     baseA.type === "Circle" ? [baseA, positionA, baseB] : [baseB, positionB, baseA]
@@ -395,18 +366,7 @@ function circlePolygonCheck(
   const closestPoint = polygon.closestPointToCentroidOf(positionC)
   const axis = closestPoint.subtract(centroid).normalize()
 
-  // project each hitbox's vertices
-  const projA = baseA.project(axis, positionA)
-  const projB = baseB.project(axis, positionB)
-
-  // check if seperate
-  if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
-
-  return {
-    colliding: true,
-    axis: axis,
-    overlap: Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min),
-  }
+  return projectCheck(axis, baseA, positionA, baseB, positionB)
 }
 
 export type Hitbox = PolygonHitbox | CircleHitbox
