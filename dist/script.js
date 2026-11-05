@@ -152,7 +152,7 @@ function drawLoop(timestamp) {
             box.hitbox.narrowUpdate(box.position, box.dir);
             client.hitbox.narrowUpdate(client.position, client.dir);
             Perf.updateMetric("hitboxUpdate");
-            const collision = box.hitbox.checkCollision(client.hitbox, box.position, client.position);
+            const collision = box.checkCollision(client);
             Perf.updateMetric("satCheck");
             collisionChecks++;
             if (collision.colliding)

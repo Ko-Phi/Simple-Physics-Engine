@@ -4,33 +4,30 @@ import { random, sq, rgba, constrain } from "../Utils/math.js"
 import { Vector } from "./vector.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
-import { Hitbox, CircleHitbox, PolygonHitbox } from "./hitbox.js"
+import { Collidable, CircleHitbox, PolygonHitbox } from "./hitbox.js"
 
-export class Base {
+export class Base extends Collidable {
   id: number
   indices: Vector[]
 
-  position: Vector
-  dir: number
   velocity: Vector
   omega: number
   shape: Shape
   trueColor: Color
 
-  hitbox: Hitbox
   axesBuffer: Vector[]
   ticks: number
 
   constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector) {
+    const hitbox =
+      shape instanceof Polygon
+        ? new PolygonHitbox(shape, position, dir)
+        : new CircleHitbox(shape, position, dir)
+    super(hitbox, position, dir)
     this.id = newid()
     this.indices = []
-    this.position = position
-    this.dir = dir
     this.shape = shape
     this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV")
-
-    if (shape instanceof Polygon) this.hitbox = new PolygonHitbox(shape, this.position, this.dir)
-    else this.hitbox = new CircleHitbox(shape, this.position, this.dir)
 
     this.axesBuffer = []
     if (Settings.initialVelocity) {

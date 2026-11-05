@@ -44,7 +44,6 @@ export abstract class AHitbox {
   abstract momentOfInertia: number
   abstract windingOrder: WindingOrder
 
-  abstract rotatedVertices: Vector[]
   abstract transformedVertices: Vector[]
   abstract cachedDir: number
   abstract cachedNormals: Vector[]
@@ -55,11 +54,6 @@ export abstract class AHitbox {
   abstract narrowUpdate: (position: Vector, dir: number) => void
   abstract project: (axis: Vector, position: Vector) => { min: number; max: number }
   abstract closestPointToCentroidOf: (position: Vector) => Vector
-  abstract checkCollision: (
-    hitboxB: Hitbox,
-    positionA: Vector,
-    positionB: Vector
-  ) => PossibleCollision
 }
 
 export class PolygonHitbox extends Polygon implements AHitbox {
@@ -72,7 +66,6 @@ export class PolygonHitbox extends Polygon implements AHitbox {
   momentOfInertia: number
   windingOrder: WindingOrder
 
-  rotatedVertices: Vector[]
   transformedVertices: Vector[]
   cachedDir: number
   lastUpdate: UpdateType
@@ -81,7 +74,6 @@ export class PolygonHitbox extends Polygon implements AHitbox {
 
   constructor(shape: Polygon, position: Vector, dir: number, rho?: number) {
     super(shape.vertices, shape.color)
-    this.rotatedVertices = []
     this.transformedVertices = []
     this.normals = []
     this.cachedDir = 0
@@ -96,7 +88,6 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     this.windingOrder = this.area < 0 ? "CW" : "CCW"
     this.area = Math.abs(this.area) / 2
     this.mass = this.area * this.rho
-    this.rotatedVertices = this.rotatedVertices.map((v) => v.rotate(dir))
     const loopedVertices =
       this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice()
     this.momentOfInertia =
@@ -176,42 +167,6 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     })
     return closestPoint
   }
-  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): PossibleCollision {
-    const baseA = this
-    const tCentroidA = baseA.centroid.add(positionA)
-    const tCentroidB = baseB.centroid.add(positionB)
-
-    // common seperation axis first
-    const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals]
-
-    const collisions: PossibleCollision[] = []
-
-    for (const axis of axes) {
-      collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB))
-    }
-
-    // Circle-Polygon Edge Case
-    if (baseB.type === "Circle") {
-      collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB))
-    }
-
-    // reorient axis when neccessary
-    const min = collisions.reduce((prev, curr) =>
-      prev.colliding === false
-        ? prev
-        : curr.colliding === false
-          ? curr
-          : curr.overlap < prev.overlap
-            ? curr
-            : prev
-    )
-    if (min.colliding === false) return min
-
-    const direction = tCentroidB.subtract(tCentroidA)
-    if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
-
-    return min
-  }
 }
 
 export class CircleHitbox extends Circle implements AHitbox {
@@ -224,7 +179,6 @@ export class CircleHitbox extends Circle implements AHitbox {
   momentOfInertia: number
   windingOrder: WindingOrder
 
-  rotatedVertices: Vector[]
   transformedVertices: Vector[]
   cachedDir: number
   lastUpdate: UpdateType
@@ -233,7 +187,6 @@ export class CircleHitbox extends Circle implements AHitbox {
 
   constructor(circle: Circle, position: Vector, dir: number, rho?: number) {
     super(circle.radius, circle.color, circle.centroid)
-    this.rotatedVertices = []
     this.transformedVertices = []
     this.normals = []
     this.cachedDir = 0
@@ -276,21 +229,36 @@ export class CircleHitbox extends Circle implements AHitbox {
   closestPointToCentroidOf(): Vector {
     throw "Uncalleable"
   }
-  checkCollision(baseB: Hitbox, positionA: Vector, positionB: Vector): PossibleCollision {
+}
+
+export class Collidable {
+  position: Vector
+  dir: number
+  hitbox: Hitbox
+  constructor(hitbox: Hitbox, position: Vector, dir: number) {
+    this.hitbox = hitbox
+    this.position = position
+    this.dir = dir
+  }
+  checkCollision(baseB: Collidable): PossibleCollision {
     const baseA = this
-    const tCentroidA = baseA.centroid.add(positionA)
-    const tCentroidB = baseB.centroid.add(positionB)
+    const tCentroidA = baseA.hitbox.centroid.add(baseA.position)
+    const tCentroidB = baseB.hitbox.centroid.add(baseB.position)
 
     // common seperation axis first
-    const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals]
+    const axes = [
+      tCentroidB.subtract(tCentroidA).normalize(),
+      ...baseA.hitbox.normals,
+      ...baseB.hitbox.normals,
+    ]
 
     // Circle-Circle test
-    if (baseA.type === baseB.type && baseA.type === "Circle") {
-      const sqDistance = baseA.centroid
-        .add(positionA)
-        .subtract(baseB.centroid.add(positionB))
+    if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
+      const sqDistance = baseA.hitbox.centroid
+        .add(baseA.position)
+        .subtract(baseB.hitbox.centroid.add(baseB.position))
         .getSqMag()
-      const radiiSum = baseA.radius + baseB.radius
+      const radiiSum = baseA.hitbox.radius + baseB.hitbox.radius
       if (sqDistance > sq(radiiSum)) {
         return { colliding: false }
       } else {
@@ -304,18 +272,15 @@ export class CircleHitbox extends Circle implements AHitbox {
       }
     }
 
-    const collisions: PossibleCollision[] = []
+    // Base Checks
+    const collisions: PossibleCollision[] = axes.map((axis) => projectCheck(axis, baseA, baseB))
 
-    for (const axis of axes) {
-      collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB))
+    // Circle-Polygon "Edge" Case
+    if (baseA.hitbox.type !== baseB.hitbox.type) {
+      collisions.push(circlePolygonCheck(baseA, baseB))
     }
 
-    // Circle-Polygon Edge Case
-    if (baseB.type === "Polygon") {
-      collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB))
-    }
-
-    // reorient axis when neccessary
+    // Check for seperation
     const min = collisions.reduce((prev, curr) =>
       prev.colliding === false
         ? prev
@@ -327,6 +292,7 @@ export class CircleHitbox extends Circle implements AHitbox {
     )
     if (min.colliding === false) return min
 
+    // reorient axis when neccessary
     const direction = tCentroidB.subtract(tCentroidA)
     if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
 
@@ -334,16 +300,10 @@ export class CircleHitbox extends Circle implements AHitbox {
   }
 }
 
-function projectCheck(
-  axis: Vector,
-  baseA: Hitbox,
-  positionA: Vector,
-  baseB: Hitbox,
-  positionB: Vector
-): PossibleCollision {
+function projectCheck(axis: Vector, baseA: Collidable, baseB: Collidable): PossibleCollision {
   // project each hitbox's vertices
-  const projA = baseA.project(axis, positionA)
-  const projB = baseB.project(axis, positionB)
+  const projA = baseA.hitbox.project(axis, baseA.position)
+  const projB = baseB.hitbox.project(axis, baseB.position)
 
   // check if seperate
   if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
@@ -352,21 +312,17 @@ function projectCheck(
   return { colliding: true, overlap: overlap, axis: axis }
 }
 
-function circlePolygonCheck(
-  baseA: Hitbox,
-  positionA: Vector,
-  baseB: Hitbox,
-  positionB: Vector
-): PossibleCollision {
+function circlePolygonCheck(baseA: Collidable, baseB: Collidable): PossibleCollision {
   // get closest point on edge and add to normals
   let [circle, positionC, polygon] =
-    baseA.type === "Circle" ? [baseA, positionA, baseB] : [baseB, positionB, baseA]
+    baseA.hitbox.type === "Circle"
+      ? [baseA.hitbox, baseA.position, baseB.hitbox]
+      : [baseB.hitbox, baseB.position, baseA.hitbox]
   const centroid = positionC.add(circle.centroid)
-
   const closestPoint = polygon.closestPointToCentroidOf(positionC)
   const axis = closestPoint.subtract(centroid).normalize()
 
-  return projectCheck(axis, baseA, positionA, baseB, positionB)
+  return projectCheck(axis, baseA, baseB)
 }
 
 export type Hitbox = PolygonHitbox | CircleHitbox

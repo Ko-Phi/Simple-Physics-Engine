@@ -29,7 +29,6 @@ export class PolygonHitbox extends Polygon {
     mass;
     momentOfInertia;
     windingOrder;
-    rotatedVertices;
     transformedVertices;
     cachedDir;
     lastUpdate;
@@ -37,7 +36,6 @@ export class PolygonHitbox extends Polygon {
     cachedCentroid;
     constructor(shape, position, dir, rho) {
         super(shape.vertices, shape.color);
-        this.rotatedVertices = [];
         this.transformedVertices = [];
         this.normals = [];
         this.cachedDir = 0;
@@ -48,7 +46,6 @@ export class PolygonHitbox extends Polygon {
         this.windingOrder = this.area < 0 ? "CW" : "CCW";
         this.area = Math.abs(this.area) / 2;
         this.mass = this.area * this.rho;
-        this.rotatedVertices = this.rotatedVertices.map((v) => v.rotate(dir));
         const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice();
         this.momentOfInertia =
             zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => ((subArea) => inertia +
@@ -109,35 +106,6 @@ export class PolygonHitbox extends Polygon {
         });
         return closestPoint;
     }
-    checkCollision(baseB, positionA, positionB) {
-        const baseA = this;
-        const tCentroidA = baseA.centroid.add(positionA);
-        const tCentroidB = baseB.centroid.add(positionB);
-        // common seperation axis first
-        const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals];
-        const collisions = [];
-        for (const axis of axes) {
-            collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB));
-        }
-        // Circle-Polygon Edge Case
-        if (baseB.type === "Circle") {
-            collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB));
-        }
-        // reorient axis when neccessary
-        const min = collisions.reduce((prev, curr) => prev.colliding === false
-            ? prev
-            : curr.colliding === false
-                ? curr
-                : curr.overlap < prev.overlap
-                    ? curr
-                    : prev);
-        if (min.colliding === false)
-            return min;
-        const direction = tCentroidB.subtract(tCentroidA);
-        if (min.axis.dotProduct(direction) < 0)
-            min.axis = min.axis.negate();
-        return min;
-    }
 }
 export class CircleHitbox extends Circle {
     normals;
@@ -147,7 +115,6 @@ export class CircleHitbox extends Circle {
     mass;
     momentOfInertia;
     windingOrder;
-    rotatedVertices;
     transformedVertices;
     cachedDir;
     lastUpdate;
@@ -155,7 +122,6 @@ export class CircleHitbox extends Circle {
     cachedCentroid;
     constructor(circle, position, dir, rho) {
         super(circle.radius, circle.color, circle.centroid);
-        this.rotatedVertices = [];
         this.transformedVertices = [];
         this.normals = [];
         this.cachedDir = 0;
@@ -194,19 +160,33 @@ export class CircleHitbox extends Circle {
     closestPointToCentroidOf() {
         throw "Uncalleable";
     }
-    checkCollision(baseB, positionA, positionB) {
+}
+export class Collidable {
+    position;
+    dir;
+    hitbox;
+    constructor(hitbox, position, dir) {
+        this.hitbox = hitbox;
+        this.position = position;
+        this.dir = dir;
+    }
+    checkCollision(baseB) {
         const baseA = this;
-        const tCentroidA = baseA.centroid.add(positionA);
-        const tCentroidB = baseB.centroid.add(positionB);
+        const tCentroidA = baseA.hitbox.centroid.add(baseA.position);
+        const tCentroidB = baseB.hitbox.centroid.add(baseB.position);
         // common seperation axis first
-        const axes = [tCentroidB.subtract(tCentroidA).normalize(), ...baseA.normals, ...baseB.normals];
+        const axes = [
+            tCentroidB.subtract(tCentroidA).normalize(),
+            ...baseA.hitbox.normals,
+            ...baseB.hitbox.normals,
+        ];
         // Circle-Circle test
-        if (baseA.type === baseB.type && baseA.type === "Circle") {
-            const sqDistance = baseA.centroid
-                .add(positionA)
-                .subtract(baseB.centroid.add(positionB))
+        if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
+            const sqDistance = baseA.hitbox.centroid
+                .add(baseA.position)
+                .subtract(baseB.hitbox.centroid.add(baseB.position))
                 .getSqMag();
-            const radiiSum = baseA.radius + baseB.radius;
+            const radiiSum = baseA.hitbox.radius + baseB.hitbox.radius;
             if (sqDistance > sq(radiiSum)) {
                 return { colliding: false };
             }
@@ -220,15 +200,13 @@ export class CircleHitbox extends Circle {
                 };
             }
         }
-        const collisions = [];
-        for (const axis of axes) {
-            collisions.push(projectCheck(axis, baseA, positionA, baseB, positionB));
+        // Base Checks
+        const collisions = axes.map((axis) => projectCheck(axis, baseA, baseB));
+        // Circle-Polygon "Edge" Case
+        if (baseA.hitbox.type !== baseB.hitbox.type) {
+            collisions.push(circlePolygonCheck(baseA, baseB));
         }
-        // Circle-Polygon Edge Case
-        if (baseB.type === "Polygon") {
-            collisions.push(circlePolygonCheck(baseA, positionA, baseB, positionB));
-        }
-        // reorient axis when neccessary
+        // Check for seperation
         const min = collisions.reduce((prev, curr) => prev.colliding === false
             ? prev
             : curr.colliding === false
@@ -238,27 +216,30 @@ export class CircleHitbox extends Circle {
                     : prev);
         if (min.colliding === false)
             return min;
+        // reorient axis when neccessary
         const direction = tCentroidB.subtract(tCentroidA);
         if (min.axis.dotProduct(direction) < 0)
             min.axis = min.axis.negate();
         return min;
     }
 }
-function projectCheck(axis, baseA, positionA, baseB, positionB) {
+function projectCheck(axis, baseA, baseB) {
     // project each hitbox's vertices
-    const projA = baseA.project(axis, positionA);
-    const projB = baseB.project(axis, positionB);
+    const projA = baseA.hitbox.project(axis, baseA.position);
+    const projB = baseB.hitbox.project(axis, baseB.position);
     // check if seperate
     if (projA.max < projB.min || projB.max < projA.min)
         return { colliding: false };
     const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
     return { colliding: true, overlap: overlap, axis: axis };
 }
-function circlePolygonCheck(baseA, positionA, baseB, positionB) {
+function circlePolygonCheck(baseA, baseB) {
     // get closest point on edge and add to normals
-    let [circle, positionC, polygon] = baseA.type === "Circle" ? [baseA, positionA, baseB] : [baseB, positionB, baseA];
+    let [circle, positionC, polygon] = baseA.hitbox.type === "Circle"
+        ? [baseA.hitbox, baseA.position, baseB.hitbox]
+        : [baseB.hitbox, baseB.position, baseA.hitbox];
     const centroid = positionC.add(circle.centroid);
     const closestPoint = polygon.closestPointToCentroidOf(positionC);
     const axis = closestPoint.subtract(centroid).normalize();
-    return projectCheck(axis, baseA, positionA, baseB, positionB);
+    return projectCheck(axis, baseA, baseB);
 }
