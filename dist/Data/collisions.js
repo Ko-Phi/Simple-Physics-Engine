@@ -25,10 +25,8 @@ export class PolygonHitbox extends Polygon {
     normals;
     rho;
     aabb;
-    area;
     mass;
     momentOfInertia;
-    windingOrder;
     transformedVertices;
     cachedDir;
     lastUpdate;
@@ -42,9 +40,6 @@ export class PolygonHitbox extends Polygon {
         this.lastUpdate = "None";
         this.cachedNormals = [];
         this.rho = rho ?? 1;
-        this.area = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0);
-        this.windingOrder = this.area < 0 ? "CW" : "CCW";
-        this.area = Math.abs(this.area) / 2;
         this.mass = this.area * this.rho;
         const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice();
         this.momentOfInertia =
@@ -55,10 +50,8 @@ export class PolygonHitbox extends Polygon {
         this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize());
         this.normals = this.cachedNormals.map((n) => n.copy());
         this.cachedCentroid = this.centroid.copy();
-        const doubleRadius = 2 *
-            Math.sqrt(this.vertices.reduce((maxSqRadius, vertex) => Math.max(vertex.subtract(this.cachedCentroid).getSqMag(), maxSqRadius), -Infinity));
         // Better for more uniform shapes (this scenario)
-        this.aabb = new Aabb(doubleRadius, doubleRadius, this.centroid);
+        this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.shallowUpdate(position, dir);
     }
     shallowUpdate(position, dir) {
@@ -111,10 +104,8 @@ export class CircleHitbox extends Circle {
     normals;
     rho;
     aabb;
-    area;
     mass;
     momentOfInertia;
-    windingOrder;
     transformedVertices;
     cachedDir;
     lastUpdate;
@@ -128,12 +119,10 @@ export class CircleHitbox extends Circle {
         this.lastUpdate = "None";
         this.cachedNormals = [];
         this.rho = rho ?? 1;
-        this.area = Math.PI * sq(this.radius);
         this.mass = this.area * this.rho;
         this.momentOfInertia = 0.5 * this.mass * sq(this.radius);
         this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.cachedCentroid = this.centroid.copy();
-        this.windingOrder = "CW";
         this.shallowUpdate(position, dir);
     }
     shallowUpdate(position, dir) {
@@ -203,9 +192,8 @@ export class Collidable {
         // Base Checks
         const collisions = axes.map((axis) => projectCheck(axis, baseA, baseB));
         // Circle-Polygon "Edge" Case
-        if (baseA.hitbox.type !== baseB.hitbox.type) {
+        if (baseA.hitbox.type !== baseB.hitbox.type)
             collisions.push(circlePolygonCheck(baseA, baseB));
-        }
         // Check for seperation
         const min = collisions.reduce((prev, curr) => prev.colliding === false
             ? prev

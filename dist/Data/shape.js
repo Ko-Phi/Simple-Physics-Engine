@@ -1,6 +1,8 @@
 import { ctx, draw as drawer, outline } from "./world.js";
+import { zipShift } from "../Utils/arrays.js";
 import { Vector } from "./vector.js";
 import { Color } from "./color.js";
+import { sq } from "../Utils/math.js";
 export function regularPolyVerts(x, y, radius, sideCount) {
     const vertices = [];
     for (let i = 0; i < sideCount; i++)
@@ -21,18 +23,19 @@ export class Polygon {
     color;
     radius;
     vertices;
+    area;
+    windingOrder;
     constructor(vertices, color = new Color([0, 0, 0, 0])) {
         this.type = "Polygon";
         this.vertices = vertices;
         this.color = color;
-        let maxSqRadius = -Infinity;
         this.centroid = this.vertices
-            .reduce((sum, vertex) => {
-            maxSqRadius = Math.max(vertex.getSqMag(), maxSqRadius);
-            return sum.add(vertex);
-        }, new Vector(0, 0))
+            .reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0))
             .divide(this.vertices.length);
-        this.radius = Math.sqrt(maxSqRadius);
+        this.radius = Math.sqrt(this.vertices.reduce((maxSqRadius, vertex) => Math.max(vertex.subtract(this.centroid).getSqMag(), maxSqRadius), -Infinity));
+        this.area = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0);
+        this.windingOrder = this.area < 0 ? "CW" : "CCW";
+        this.area = Math.abs(this.area) / 2;
     }
     draw(dx, dy, θ) {
         ctx.setTransform(1, 0, 0, 1, dx, dy);
@@ -45,11 +48,13 @@ export class Circle {
     centroid;
     color;
     radius;
+    area;
     constructor(radius, color = new Color([0, 0, 0, 0]), centroid = new Vector(0, 0)) {
         this.type = "Circle";
         this.centroid = centroid;
         this.radius = radius;
         this.color = color;
+        this.area = Math.PI * sq(this.radius);
     }
     draw(dx, dy, θ) {
         ctx.setTransform(1, 0, 0, 1, dx, dy);
