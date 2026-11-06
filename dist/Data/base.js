@@ -4,7 +4,7 @@ import { random, sq, rgba, constrain } from "../Utils/math.js";
 import { Vector } from "./vector.js";
 import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
-import { Collidable, CircleHitbox, PolygonHitbox } from "./collisions.js";
+import { Collidable, CircleHitbox, PolygonHitbox, } from "./collisions.js";
 export class Base extends Collidable {
     id;
     indices;
@@ -73,8 +73,8 @@ export class Base extends Collidable {
             return;
         const axis = data.axis;
         const MTV = data.axis.scale(data.overlap);
-        const baseB = data.baseB;
-        const baseA = data.baseA;
+        const baseA = data.refA;
+        const baseB = data.refB;
         const bases = [baseA, baseB];
         const massA = baseA.hitbox.mass, massB = baseB.hitbox.mass;
         const displacementA = MTV.scale(massB / (massA + massB));

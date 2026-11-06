@@ -220,7 +220,7 @@ function drawLoop(timestamp: number) {
       const collision = box.checkCollision(client)
       Perf.updateMetric("satCheck")
       collisionChecks++
-      if (collision.colliding) collisions.push({ ...collision, baseA: box, baseB: client })
+      if (collision) collisions.push({ ...collision, baseA: box, baseB: client })
     }
   }
 

@@ -159,25 +159,25 @@ export class Collidable {
         this.position = position;
         this.dir = dir;
     }
-    checkCollision(baseB) {
-        const baseA = this;
-        const tCentroidA = baseA.hitbox.centroid.add(baseA.position);
-        const tCentroidB = baseB.hitbox.centroid.add(baseB.position);
+    checkCollision(refB) {
+        const refA = this;
+        const tCentroidA = refA.hitbox.centroid.add(refA.position);
+        const tCentroidB = refB.hitbox.centroid.add(refB.position);
         // common seperation axis first
         const axes = [
             tCentroidB.subtract(tCentroidA).normalize(),
-            ...baseA.hitbox.normals,
-            ...baseB.hitbox.normals,
+            ...refA.hitbox.normals,
+            ...refB.hitbox.normals,
         ];
         // Circle-Circle test
-        if (baseA.hitbox.type === baseB.hitbox.type && baseA.hitbox.type === "Circle") {
-            const sqDistance = baseA.hitbox.centroid
-                .add(baseA.position)
-                .subtract(baseB.hitbox.centroid.add(baseB.position))
+        if (refA.hitbox.type === refB.hitbox.type && refA.hitbox.type === "Circle") {
+            const sqDistance = refA.hitbox.centroid
+                .add(refA.position)
+                .subtract(refB.hitbox.centroid.add(refB.position))
                 .getSqMag();
-            const radiiSum = baseA.hitbox.radius + baseB.hitbox.radius;
+            const radiiSum = refA.hitbox.radius + refB.hitbox.radius;
             if (sqDistance > sq(radiiSum)) {
-                return { colliding: false };
+                return false;
             }
             else {
                 const overlap = Math.sqrt(sqDistance) - radiiSum;
@@ -186,25 +186,19 @@ export class Collidable {
                     colliding: true,
                     axis: normal,
                     overlap,
-                    baseA: baseA,
-                    baseB: baseB,
+                    refA: refA,
+                    refB: refB,
                 };
             }
         }
         // Base Checks
-        const collisions = axes.map((axis) => projectCheck(axis, baseA, baseB));
+        const collisions = axes.map((axis) => projectCheck(axis, refA, refB));
         // Circle-Polygon "Edge" Case
-        if (baseA.hitbox.type !== baseB.hitbox.type)
-            collisions.push(circlePolygonCheck(baseA, baseB));
+        if (refA.hitbox.type !== refB.hitbox.type)
+            collisions.push(circlePolygonCheck(refA, refB));
         // Check for seperation
-        const min = collisions.reduce((prev, curr) => prev.colliding === false
-            ? prev
-            : curr.colliding === false
-                ? curr
-                : curr.overlap < prev.overlap
-                    ? curr
-                    : prev);
-        if (min.colliding === false)
+        const min = collisions.reduce((prev, curr) => prev === false || curr === false ? false : curr.overlap < prev.overlap ? curr : prev);
+        if (min === false)
             return min;
         // reorient axis when neccessary
         const direction = tCentroidB.subtract(tCentroidA);
@@ -213,25 +207,25 @@ export class Collidable {
         return min;
     }
 }
-function projectCheck(axis, baseA, baseB) {
+function projectCheck(axis, refA, refB) {
     // project each hitbox's vertices
-    const projA = baseA.hitbox.project(axis, baseA.position);
-    const projB = baseB.hitbox.project(axis, baseB.position);
+    const projA = refA.hitbox.project(axis, refA.position);
+    const projB = refB.hitbox.project(axis, refB.position);
     // check if seperate
     if (projA.max < projB.min || projB.max < projA.min)
-        return { colliding: false };
+        return false;
     const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
-    return { colliding: true, overlap, axis, baseA, baseB };
+    return { colliding: true, overlap, axis, refA, refB };
 }
-function circlePolygonCheck(baseA, baseB) {
+function circlePolygonCheck(refA, refB) {
     // get closest point on edge and add to normals
-    let [circle, positionC, polygon] = baseA.hitbox.type === "Circle"
-        ? [baseA.hitbox, baseA.position, baseB.hitbox]
-        : [baseB.hitbox, baseB.position, baseA.hitbox];
+    let [circle, positionC, polygon] = refA.hitbox.type === "Circle"
+        ? [refA.hitbox, refA.position, refB.hitbox]
+        : [refB.hitbox, refB.position, refA.hitbox];
     const centroid = positionC.add(circle.centroid);
     const closestPoint = polygon.closestPointToCentroidOf(positionC);
     const axis = closestPoint.subtract(centroid).normalize();
-    return projectCheck(axis, baseA, baseB);
+    return projectCheck(axis, refA, refB);
 }
 export class CollisionHandler {
 }

@@ -4,7 +4,13 @@ import { random, sq, rgba, constrain } from "../Utils/math.js"
 import { Vector } from "./vector.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
-import { Collidable, CircleHitbox, PolygonHitbox, CollisionHandler } from "./collisions.js"
+import {
+  Collidable,
+  CircleHitbox,
+  PolygonHitbox,
+  CollisionHandler,
+  Collision,
+} from "./collisions.js"
 
 export class Base extends Collidable implements CollisionHandler<Base, Base> {
   id: number
@@ -83,18 +89,12 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
   draw() {
     this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir)
   }
-  handleCollision(data: {
-    colliding: boolean
-    axis: Vector
-    overlap: number
-    baseA: Base
-    baseB: Base
-  }) {
+  handleCollision(data: Collision<Base, Base>) {
     if (!data.colliding) return
     const axis = data.axis
     const MTV = data.axis.scale(data.overlap)
-    const baseB = data.baseB
-    const baseA = data.baseA
+    const baseA = data.refA
+    const baseB = data.refB
     const bases = [baseA, baseB]
 
     const massA = baseA.hitbox.mass,

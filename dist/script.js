@@ -155,7 +155,7 @@ function drawLoop(timestamp) {
             const collision = box.checkCollision(client);
             Perf.updateMetric("satCheck");
             collisionChecks++;
-            if (collision.colliding)
+            if (collision)
                 collisions.push({ ...collision, baseA: box, baseB: client });
         }
     }
