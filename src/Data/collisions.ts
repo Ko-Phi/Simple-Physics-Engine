@@ -5,9 +5,15 @@ import { draw, ctx, halfHeight, halfWidth } from "../Data/world.js"
 import * as Settings from "../Data/world.js"
 import { rgba, sq, constrain } from "../Utils/math.js"
 
-type Collision = { colliding: true; axis: Vector; overlap: number }
+export type Collision<A extends Collidable, B extends Collidable> = {
+  colliding: true
+  axis: Vector
+  overlap: number
+  baseA: A
+  baseB: B
+}
 type Seperation = { colliding: false }
-type PossibleCollision = Collision | Seperation
+type PossibleCollision<A extends Collidable, B extends Collidable> = Collision<A, B> | Seperation
 
 export class Aabb {
   width: number
@@ -216,7 +222,7 @@ export class Collidable {
     this.position = position
     this.dir = dir
   }
-  checkCollision(baseB: Collidable): PossibleCollision {
+  checkCollision<B extends Collidable>(baseB: B): PossibleCollision<this, B> {
     const baseA = this
     const tCentroidA = baseA.hitbox.centroid.add(baseA.position)
     const tCentroidB = baseB.hitbox.centroid.add(baseB.position)
@@ -243,13 +249,17 @@ export class Collidable {
         return {
           colliding: true,
           axis: normal,
-          overlap: overlap,
+          overlap,
+          baseA: baseA,
+          baseB: baseB,
         }
       }
     }
 
     // Base Checks
-    const collisions: PossibleCollision[] = axes.map((axis) => projectCheck(axis, baseA, baseB))
+    const collisions: PossibleCollision<this, B>[] = axes.map((axis) =>
+      projectCheck(axis, baseA, baseB)
+    )
 
     // Circle-Polygon "Edge" Case
     if (baseA.hitbox.type !== baseB.hitbox.type) collisions.push(circlePolygonCheck(baseA, baseB))
@@ -274,7 +284,11 @@ export class Collidable {
   }
 }
 
-function projectCheck(axis: Vector, baseA: Collidable, baseB: Collidable): PossibleCollision {
+function projectCheck<A extends Collidable, B extends Collidable>(
+  axis: Vector,
+  baseA: A,
+  baseB: B
+): PossibleCollision<A, B> {
   // project each hitbox's vertices
   const projA = baseA.hitbox.project(axis, baseA.position)
   const projB = baseB.hitbox.project(axis, baseB.position)
@@ -283,10 +297,13 @@ function projectCheck(axis: Vector, baseA: Collidable, baseB: Collidable): Possi
   if (projA.max < projB.min || projB.max < projA.min) return { colliding: false }
 
   const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-  return { colliding: true, overlap: overlap, axis: axis }
+  return { colliding: true, overlap, axis, baseA, baseB }
 }
 
-function circlePolygonCheck(baseA: Collidable, baseB: Collidable): PossibleCollision {
+function circlePolygonCheck<A extends Collidable, B extends Collidable>(
+  baseA: A,
+  baseB: B
+): PossibleCollision<A, B> {
   // get closest point on edge and add to normals
   let [circle, positionC, polygon] =
     baseA.hitbox.type === "Circle"
@@ -297,6 +314,10 @@ function circlePolygonCheck(baseA: Collidable, baseB: Collidable): PossibleColli
   const axis = closestPoint.subtract(centroid).normalize()
 
   return projectCheck(axis, baseA, baseB)
+}
+
+export abstract class CollisionHandler<A extends Collidable, B extends Collidable> {
+  abstract handleCollision: (collision: Collision<A, B>) => void
 }
 
 export type Hitbox = PolygonHitbox | CircleHitbox

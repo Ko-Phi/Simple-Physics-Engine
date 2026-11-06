@@ -185,7 +185,9 @@ export class Collidable {
                 return {
                     colliding: true,
                     axis: normal,
-                    overlap: overlap,
+                    overlap,
+                    baseA: baseA,
+                    baseB: baseB,
                 };
             }
         }
@@ -219,7 +221,7 @@ function projectCheck(axis, baseA, baseB) {
     if (projA.max < projB.min || projB.max < projA.min)
         return { colliding: false };
     const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
-    return { colliding: true, overlap: overlap, axis: axis };
+    return { colliding: true, overlap, axis, baseA, baseB };
 }
 function circlePolygonCheck(baseA, baseB) {
     // get closest point on edge and add to normals
@@ -230,4 +232,6 @@ function circlePolygonCheck(baseA, baseB) {
     const closestPoint = polygon.closestPointToCentroidOf(positionC);
     const axis = closestPoint.subtract(centroid).normalize();
     return projectCheck(axis, baseA, baseB);
+}
+export class CollisionHandler {
 }
