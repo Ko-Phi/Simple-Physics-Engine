@@ -1,7 +1,6 @@
 import { draw, ctx, newid, halfWidth, halfHeight } from "./world.js"
 import * as Settings from "./world.js"
-import { random, sq, rgba, constrain } from "../Utils/math.js"
-import { Vector } from "./vector.js"
+import { Vector, random, sq, rgba, constrain } from "../Utils/math.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
 import {
@@ -11,6 +10,7 @@ import {
   CollisionHandler,
   Collision,
 } from "./collisions.js"
+import { zipShift } from "../Utils/arrays.js"
 
 export class Base extends Collidable implements CollisionHandler<Base, Base> {
   id: number
@@ -120,8 +120,7 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
         */
 
       // base loop
-      bases.forEach((base: Base, index: number, bases: Base[]) => {
-        const otherBase = bases[(index + 1) % bases.length]
+      zipShift(bases).forEach(([base, otherBase]) => {
         const vertices = base.hitbox.transformedVertices
         const otherVertices = otherBase.hitbox.transformedVertices
         // vertex loop

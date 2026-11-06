@@ -1,4 +1,4 @@
-import { Vector } from "../Data/vector.js"
+import { Vector } from "../Utils/math.js"
 
 export class Draw {
   ctx: CanvasRenderingContext2D

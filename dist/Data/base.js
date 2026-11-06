@@ -1,10 +1,10 @@
 import { draw, ctx, newid, halfWidth, halfHeight } from "./world.js";
 import * as Settings from "./world.js";
-import { random, sq, rgba, constrain } from "../Utils/math.js";
-import { Vector } from "./vector.js";
+import { Vector, random, sq, rgba, constrain } from "../Utils/math.js";
 import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
 import { Collidable, CircleHitbox, PolygonHitbox, } from "./collisions.js";
+import { zipShift } from "../Utils/arrays.js";
 export class Base extends Collidable {
     id;
     indices;
@@ -96,8 +96,7 @@ export class Base extends Collidable {
                     \C
               */
             // base loop
-            bases.forEach((base, index, bases) => {
-                const otherBase = bases[(index + 1) % bases.length];
+            zipShift(bases).forEach(([base, otherBase]) => {
                 const vertices = base.hitbox.transformedVertices;
                 const otherVertices = otherBase.hitbox.transformedVertices;
                 // vertex loop

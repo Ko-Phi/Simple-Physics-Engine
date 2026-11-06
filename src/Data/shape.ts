@@ -1,8 +1,7 @@
 import { ctx, draw as drawer, outline } from "./world.js"
 import { zipShift } from "../Utils/arrays.js"
-import { Vector } from "./vector.js"
 import { Color } from "./color.js"
-import { sq } from "../Utils/math.js"
+import { Vector, sq } from "../Utils/math.js"
 
 export function regularPolyVerts(x: number, y: number, radius: number, sideCount: number) {
   const vertices = []

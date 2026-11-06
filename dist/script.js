@@ -1,5 +1,4 @@
-import { sq, random, rgba } from "./Utils/math.js";
-import { Vector } from "./Data/vector.js";
+import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { Color } from "./Data/color.js";
 import { canvas, draw, ctx, outline, width, height, halfHeight, halfWidth } from "./Data/world.js";
 import * as Settings from "./Data/world.js";

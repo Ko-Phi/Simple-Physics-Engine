@@ -1,9 +1,8 @@
-import { Vector } from "./vector.js"
 import { Polygon, Circle } from "./shape.js"
 import { zipShift, zipWith, shift } from "../Utils/arrays.js"
 import { draw, ctx, halfHeight, halfWidth } from "../Data/world.js"
 import * as Settings from "../Data/world.js"
-import { rgba, sq, constrain } from "../Utils/math.js"
+import { Vector, rgba, sq, constrain } from "../Utils/math.js"
 
 export type Collision<A extends Collidable, B extends Collidable> = {
   colliding: true
