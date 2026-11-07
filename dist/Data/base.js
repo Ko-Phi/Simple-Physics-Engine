@@ -5,7 +5,7 @@ import { Vector, random, sq, rgba } from "../Utils/math.js";
 import { zipShift } from "../Utils/arrays.js";
 import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
-import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./collisions.js";
+import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./Collisions/collisions.js";
 export class Shapeoid extends Collidable {
     id;
     indices;

@@ -1,8 +1,8 @@
-import { Polygon, Circle } from "./shape.js";
-import { zipShift, zipWith, shift } from "../Utils/arrays.js";
-import { draw, ctx, halfHeight, halfWidth } from "../Data/world.js";
-import * as Settings from "../Data/world.js";
-import { Vector, rgba, sq, constrain } from "../Utils/math.js";
+import { Polygon, Circle } from "../../Data/shape.js";
+import { zipShift, zipWith, shift } from "../../Utils/arrays.js";
+import { draw, ctx, halfHeight, halfWidth } from "../../Data/world.js";
+import * as Settings from "../../Data/world.js";
+import { Vector, rgba, sq, constrain } from "../../Utils/math.js";
 export class Aabb {
     width;
     height;

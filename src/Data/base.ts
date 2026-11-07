@@ -12,7 +12,7 @@ import {
   CollisionHandler,
   Collision,
   isPolygonHitbox,
-} from "./collisions.js"
+} from "./Collisions/collisions.js"
 
 export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, Shapeoid> {
   id: number

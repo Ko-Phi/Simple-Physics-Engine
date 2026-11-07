@@ -1,8 +1,8 @@
-import { displayGridCheck } from "./world.js"
-import { Draw } from "../Utils/drawing.js"
+import { displayGridCheck } from "../../Data/world.js"
+import { Draw } from "../../Utils/drawing.js"
 import { Collidable } from "./collisions.js"
-import { Vector, rgba } from "../Utils/math.js"
-import { NArray } from "../Utils/arrays.js"
+import { Vector, rgba } from "../../Utils/math.js"
+import { NArray } from "../../Utils/arrays.js"
 
 export class SpatialHashGrid {
   cellsChecked

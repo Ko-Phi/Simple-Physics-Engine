@@ -1,11 +1,10 @@
-import { keys } from "./Data/world.js"
 import { Vector, sq, random, rgba } from "./Utils/math.js"
 import { Color } from "./Data/color.js"
 
 import { canvas, draw, ctx, outline, width, height, halfHeight, halfWidth } from "./Data/world.js"
 import * as Settings from "./Data/world.js"
 
-import { SpatialHashGrid } from "./Data/spatialHashGrid.js"
+import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js"
 
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw)
 

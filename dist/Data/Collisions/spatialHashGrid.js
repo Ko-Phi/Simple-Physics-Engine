@@ -1,5 +1,5 @@
-import { displayGridCheck } from "./world.js";
-import { Vector, rgba } from "../Utils/math.js";
+import { displayGridCheck } from "../../Data/world.js";
+import { Vector, rgba } from "../../Utils/math.js";
 export class SpatialHashGrid {
     cellsChecked;
     grid;
