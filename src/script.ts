@@ -173,9 +173,7 @@ function drawLoop(timestamp: number) {
   Perf.getTime()
 
   for (const box of boxes) {
-    KE +=
-      (box.hitbox.mass * box.velocity.getSqMag()) / 2 +
-      (box.hitbox.momentOfInertia * sq(box.omega)) / 2
+    KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.momentOfInertia * sq(box.omega)) / 2
     box.update(dt)
     Perf.updateMetric("boxUpdate")
     box.hitbox.shallowUpdate(box.position, box.dir)

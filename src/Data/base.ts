@@ -1,6 +1,7 @@
 import { draw, ctx, newid, halfWidth, halfHeight } from "./world.js"
 import * as Settings from "./world.js"
-import { Vector, random, sq, rgba, constrain } from "../Utils/math.js"
+import { Vector, random, sq, rgba } from "../Utils/math.js"
+import { zipShift } from "../Utils/arrays.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
 import {
@@ -9,11 +10,16 @@ import {
   PolygonHitbox,
   CollisionHandler,
   Collision,
+  isPolygonHitbox,
 } from "./collisions.js"
 
 export class Base extends Collidable implements CollisionHandler<Base, Base> {
   id: number
   indices: Vector[]
+
+  rho: number
+  mass: number
+  momentOfInertia: number
 
   velocity: Vector
   omega: number
@@ -23,7 +29,7 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
   axesBuffer: Vector[]
   ticks: number
 
-  constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector) {
+  constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector, rho: number = 1) {
     const hitbox =
       shape instanceof Polygon
         ? new PolygonHitbox(shape, position, dir)
@@ -33,6 +39,30 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
     this.indices = []
     this.shape = shape
     this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV")
+
+    this.rho = rho
+    this.mass = this.shape.area * this.rho
+    if (this.hitbox.type === "Circle") {
+      this.momentOfInertia = 0.5 * this.mass * sq(this.hitbox.radius)
+    } else if (isPolygonHitbox(this.hitbox)) {
+      const loopedVertices =
+        this.hitbox.windingOrder === "CW"
+          ? this.hitbox.vertices.slice().reverse()
+          : this.hitbox.vertices.slice()
+      this.momentOfInertia =
+        zipShift(loopedVertices).reduce(
+          (inertia, [vertex, nextVertex]) =>
+            ((subArea) =>
+              inertia +
+              subArea *
+                (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(
+              vertex.crossProduct(nextVertex)
+            ),
+          0
+        ) *
+          (this.rho / 12) -
+        this.mass * this.hitbox.centroid.getSqMag()
+    } else throw "impossible"
 
     this.axesBuffer = []
     if (Settings.initialVelocity) {
@@ -95,8 +125,8 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
     const baseA = data.refA
     const baseB = data.refB
 
-    const massA = baseA.hitbox.mass,
-      massB = baseB.hitbox.mass
+    const massA = baseA.mass,
+      massB = baseB.mass
 
     const displacementA = MTV.scale(massB / (massA + massB))
     const displacementB = MTV.scale(massA / (massA + massB))
@@ -118,8 +148,8 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
 
       const velocityAB = contactVelocityB.subtract(contactVelocityA)
 
-      const inertiaA = baseA.hitbox.momentOfInertia
-      const inertiaB = baseB.hitbox.momentOfInertia
+      const inertiaA = baseA.momentOfInertia
+      const inertiaB = baseB.momentOfInertia
       const impulseScalar =
         velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
         (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +

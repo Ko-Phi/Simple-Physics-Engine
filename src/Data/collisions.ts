@@ -48,17 +48,9 @@ export class Aabb {
 export type UpdateType = "None" | "AABB" | "SAT"
 export abstract class AHitbox {
   abstract normals: Vector[]
-
-  abstract rho: number
   abstract aabb: Aabb
-  abstract mass: number
-  abstract momentOfInertia: number
-
-  abstract transformedVertices: Vector[]
   abstract cachedDir: number
-  abstract cachedNormals: Vector[]
   abstract cachedCentroid: Vector
-
   abstract lastUpdate: UpdateType
   abstract shallowUpdate: (position: Vector, dir: number) => void
   abstract narrowUpdate: (position: Vector, dir: number) => void
@@ -67,59 +59,31 @@ export abstract class AHitbox {
 
 export class PolygonHitbox extends Polygon implements AHitbox {
   normals: Vector[]
-
-  rho: number
   aabb: Aabb
-  mass: number
-  momentOfInertia: number
-
   transformedVertices: Vector[]
   cachedDir: number
   lastUpdate: UpdateType
   cachedNormals: Vector[]
   cachedCentroid: Vector
-
-  constructor(shape: Polygon, position: Vector, dir: number, rho?: number) {
+  constructor(shape: Polygon, position: Vector, dir: number) {
     super(shape.vertices, shape.color)
     this.transformedVertices = []
     this.normals = []
     this.cachedDir = 0
     this.lastUpdate = "None"
     this.cachedNormals = []
-    this.rho = rho ?? 1
-
-    this.mass = this.area * this.rho
-    const loopedVertices =
-      this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice()
-    this.momentOfInertia =
-      zipShift(loopedVertices).reduce(
-        (inertia, [vertex, nextVertex]) =>
-          ((subArea) =>
-            inertia +
-            subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(
-            vertex.crossProduct(nextVertex)
-          ),
-        0
-      ) *
-        (this.rho / 12) -
-      this.mass * this.centroid.getSqMag()
-
     this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) =>
       nextVertex.subtract(vertex).perpendicular().normalize()
     )
     this.normals = this.cachedNormals.map((n) => n.copy())
-
     this.cachedCentroid = this.centroid.copy()
-    // Better for more uniform shapes (this scenario)
     this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid)
-
     this.shallowUpdate(position, dir)
   }
   shallowUpdate(position: Vector, dir: number) {
     this.lastUpdate = "AABB"
     // check if rotation recalc neccessary
-    if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
-      this.centroid.rotate(dir)
+    if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0) this.centroid.rotate(dir)
     if (!Settings.displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
     this.aabb.draw(position)
@@ -160,52 +124,31 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     return closestPoint
   }
 }
+export const isPolygonHitbox = (shape: Hitbox): shape is PolygonHitbox => shape.type === "Polygon"
 
 export class CircleHitbox extends Circle implements AHitbox {
   normals: Vector[]
-
-  rho: number
   aabb: Aabb
-  mass: number
-  momentOfInertia: number
-
-  transformedVertices: Vector[]
   cachedDir: number
   lastUpdate: UpdateType
-  cachedNormals: Vector[]
   cachedCentroid: Vector
-
-  constructor(circle: Circle, position: Vector, dir: number, rho?: number) {
+  constructor(circle: Circle, position: Vector, dir: number) {
     super(circle.radius, circle.color, circle.centroid)
-    this.transformedVertices = []
     this.normals = []
     this.cachedDir = 0
     this.lastUpdate = "None"
-    this.cachedNormals = []
-
-    this.rho = rho ?? 1
-
-    this.mass = this.area * this.rho
-    this.momentOfInertia = 0.5 * this.mass * sq(this.radius)
-
     this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid)
     this.cachedCentroid = this.centroid.copy()
-
     this.shallowUpdate(position, dir)
   }
   shallowUpdate(position: Vector, dir: number) {
     this.lastUpdate = "AABB"
-
-    // check if rotation recalc neccessary
-    if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
-      this.centroid.rotate(dir)
+    if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0) this.centroid.rotate(dir)
     if (!Settings.displayAABB) return
     // display AABB (note aabb centroid points to base centroid)
     this.aabb.draw(position)
   }
-  narrowUpdate() {
-    return
-  }
+  narrowUpdate = () => undefined
   project(axis: Vector, position: Vector): { min: number; max: number } {
     const centroid = this.centroid.add(position)
     const projection = axis.dotProduct(centroid)

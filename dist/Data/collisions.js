@@ -22,41 +22,29 @@ export class AHitbox {
 }
 export class PolygonHitbox extends Polygon {
     normals;
-    rho;
     aabb;
-    mass;
-    momentOfInertia;
     transformedVertices;
     cachedDir;
     lastUpdate;
     cachedNormals;
     cachedCentroid;
-    constructor(shape, position, dir, rho) {
+    constructor(shape, position, dir) {
         super(shape.vertices, shape.color);
         this.transformedVertices = [];
         this.normals = [];
         this.cachedDir = 0;
         this.lastUpdate = "None";
         this.cachedNormals = [];
-        this.rho = rho ?? 1;
-        this.mass = this.area * this.rho;
-        const loopedVertices = this.windingOrder === "CW" ? this.vertices.slice().reverse() : this.vertices.slice();
-        this.momentOfInertia =
-            zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => ((subArea) => inertia +
-                subArea * (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) *
-                (this.rho / 12) -
-                this.mass * this.centroid.getSqMag();
         this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize());
         this.normals = this.cachedNormals.map((n) => n.copy());
         this.cachedCentroid = this.centroid.copy();
-        // Better for more uniform shapes (this scenario)
         this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.shallowUpdate(position, dir);
     }
     shallowUpdate(position, dir) {
         this.lastUpdate = "AABB";
         // check if rotation recalc neccessary
-        if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+        if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0)
             this.centroid.rotate(dir);
         if (!Settings.displayAABB)
             return;
@@ -99,44 +87,32 @@ export class PolygonHitbox extends Polygon {
         return closestPoint;
     }
 }
+export const isPolygonHitbox = (shape) => shape.type === "Polygon";
 export class CircleHitbox extends Circle {
     normals;
-    rho;
     aabb;
-    mass;
-    momentOfInertia;
-    transformedVertices;
     cachedDir;
     lastUpdate;
-    cachedNormals;
     cachedCentroid;
-    constructor(circle, position, dir, rho) {
+    constructor(circle, position, dir) {
         super(circle.radius, circle.color, circle.centroid);
-        this.transformedVertices = [];
         this.normals = [];
         this.cachedDir = 0;
         this.lastUpdate = "None";
-        this.cachedNormals = [];
-        this.rho = rho ?? 1;
-        this.mass = this.area * this.rho;
-        this.momentOfInertia = 0.5 * this.mass * sq(this.radius);
         this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.cachedCentroid = this.centroid.copy();
         this.shallowUpdate(position, dir);
     }
     shallowUpdate(position, dir) {
         this.lastUpdate = "AABB";
-        // check if rotation recalc neccessary
-        if (dir !== this.cachedDir && this.cachedCentroid.x + this.cachedCentroid.y !== 0)
+        if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0)
             this.centroid.rotate(dir);
         if (!Settings.displayAABB)
             return;
         // display AABB (note aabb centroid points to base centroid)
         this.aabb.draw(position);
     }
-    narrowUpdate() {
-        return;
-    }
+    narrowUpdate = () => undefined;
     project(axis, position) {
         const centroid = this.centroid.add(position);
         const projection = axis.dotProduct(centroid);
