@@ -48,8 +48,10 @@ export class SpatialHashGrid {
         const i1 = this.getIndex(x - w / 2, y - h / 2);
         const i2 = this.getIndex(x + w / 2, y + h / 2);
         // iterate over spanned area for clients
-        if (displayGridCheck)
+        if (displayGridCheck) {
             this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2, this.dimensions.y / 2);
+            this.drawer.rect(...[i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1].map((n) => n * this.cellSize), rgba(100, 30));
+        }
         let clients = [];
         const queryId = this.queryIds++;
         for (let x = i1.x; x <= i2.x; ++x) {
@@ -63,8 +65,6 @@ export class SpatialHashGrid {
                         clients.push(client);
                     }
                 }
-                if (displayGridCheck)
-                    this.drawer.rect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize, rgba(100, 15));
                 this.cellsChecked++;
             }
         }

@@ -38,7 +38,7 @@ export const restitution = 1; // collision bounciness. Values < 1 yield loss of 
 export const mu = 0; // add friction (should be quite small)
 export const allCircles = false; // all shapes are circles. Increases performance as well
 export const allPolys = false; // all shapes are polygons. Slightly more performance intensive
-export const gridSize = 25; // influences hashgrid check. Can queak for minor performance improvement
+export const gridSize = 100; // influences hashgrid check. Can queak for minor performance improvement
 // Box Count
 export const insertCount = 100;
 export const scale = 20;
