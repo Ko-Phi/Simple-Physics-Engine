@@ -44,6 +44,12 @@ export class PerformanceProfile {
             percentage: percentage,
         };
     }
+    updateMetrics() {
+        for (const key in this.metrics) {
+            const metricData = this.getMetricData(key);
+            this.metrics[key] = Object.assign({}, metricData);
+        }
+    }
     // for next frame
     resetMetrics() {
         for (const key in this.metrics) {
@@ -81,14 +87,6 @@ export class PerformanceProfile {
         ctx.resetTransform();
         const metricCount = Object.keys(this.metrics).length;
         draw.rect(margin, margin, metricDisplayWidth, padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding, rgba(0, 120));
-        if (this.ticks % displayPeriod === 0) {
-            const totalData = this.getMetricData("total");
-            this.metrics.total = Object.assign({}, totalData);
-            for (const key in this.metrics) {
-                const metricData = this.getMetricData(key);
-                this.metrics[key] = Object.assign({}, metricData);
-            }
-        }
         let dx, dy;
         dy = dx = start;
         draw.text("Key", dx, dy);

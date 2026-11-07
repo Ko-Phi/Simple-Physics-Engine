@@ -115,7 +115,6 @@ function drawLoop(timestamp) {
         else
             box.draw();
         ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight);
-        ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight);
         draw.ellipse(box.position.x + box.hitbox.centroid.x, box.position.y + box.hitbox.centroid.y, 5, 5, rgba(211, 175, 55), 1, outline);
     }
     Perf.updateMetric("drawBoxes");
@@ -146,6 +145,8 @@ function drawLoop(timestamp) {
     const rowHeight = 15 * 2;
     const rowGap = 0;
     const start = margin + padding;
+    if (ticks % 60 === 0)
+        Perf.updateMetrics();
     Perf.draw(["average", "max", "percentage"], dt);
     const counterDisplayHeight = padding + Object.keys(countMetrics).length * (rowHeight + rowGap) + padding;
     const counterDisplayWidth = padding + keyWidth + columnGap + dataWidth + padding;
