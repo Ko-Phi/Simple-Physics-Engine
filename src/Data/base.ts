@@ -94,6 +94,10 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     if (velocity > Settings.mu)
       this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity))
     else this.velocity = new Vector(0, 0)
+    const torque = (Settings.mu * this.shape.radius * this.mass) / this.inertia
+    if (Math.abs(this.omega) > torque) {
+      this.omega -= Math.sign(this.omega) * torque
+    } else this.omega = 0
 
     if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2) {
       this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2)
