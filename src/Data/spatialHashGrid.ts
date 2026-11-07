@@ -1,6 +1,6 @@
 import { displayGridCheck } from "./world.js"
 import { Draw } from "../Utils/drawing.js"
-import { Base } from "./base.js"
+import { Collidable } from "./collisions.js"
 import { Vector, rgba } from "../Utils/math.js"
 
 export class SpatialHashGrid {
@@ -21,13 +21,13 @@ export class SpatialHashGrid {
   key = (x: number, y: number): string => x + "," + y
   getIndex = (x: number, y: number): Vector =>
     new Vector(...([x, y].map((c) => Math.floor(c / this.cellSize)) as [number, number]))
-  newClient(client: Base) {
+  newClient<Type extends Collidable>(client: Type) {
     client.indices = []
     this.insert(client)
     this.queryIds = -1
     return client
   }
-  insert(client: Base) {
+  insert<Type extends Collidable>(client: Type) {
     const x = client.position.x + client.hitbox.aabb.centroid.x
     const y = client.position.y + client.hitbox.aabb.centroid.y
     const w = client.hitbox.aabb.width
@@ -82,7 +82,7 @@ export class SpatialHashGrid {
     }
     return clients
   }
-  remove(client: Base) {
+  remove<Type extends Collidable>(client: Type) {
     const i1 = client.indices[0]
     const i2 = client.indices[1]
     // iterate over client's span, removing it from each cell
@@ -95,7 +95,7 @@ export class SpatialHashGrid {
       }
     }
   }
-  update(client: Base) {
+  update<Type extends Collidable>(client: Type) {
     const x = client.position.x + client.hitbox.aabb.centroid.x
     const y = client.position.y + client.hitbox.aabb.centroid.y
     const w = client.hitbox.aabb.width

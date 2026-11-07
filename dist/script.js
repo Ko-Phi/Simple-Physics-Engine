@@ -5,7 +5,7 @@ import * as Settings from "./Data/world.js";
 import { SpatialHashGrid } from "./Data/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw);
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
-import { Base } from "./Data/base.js";
+import { Shapeoid } from "./Data/base.js";
 let boxes = [];
 for (let i = 0; i < Settings.insertCount; i++) {
     let shape = (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
@@ -16,10 +16,10 @@ for (let i = 0; i < Settings.insertCount; i++) {
         let hHeight = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5;
         shape = new Polygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), new Color([255, 0, 0]));
     }
-    boxes.push(new Base(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
+    boxes.push(new Shapeoid(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
 }
 if (Settings.insertCount === 0)
-    boxes.push(new Base(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Base(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Base(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Base(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Base(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
+    boxes.push(new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Shapeoid(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
 const displayPeriod = 60;
 class PerformanceProfile {
     metrics;
@@ -112,7 +112,7 @@ function drawLoop(timestamp) {
     world.draw();
     Perf.getTime();
     for (const box of boxes) {
-        KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.momentOfInertia * sq(box.omega)) / 2;
+        KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2;
         box.update(dt);
         Perf.updateMetric("boxUpdate");
         box.hitbox.shallowUpdate(box.position, box.dir);

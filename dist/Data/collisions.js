@@ -123,10 +123,12 @@ export class CircleHitbox extends Circle {
     }
 }
 export class Collidable {
+    indices;
     position;
     dir;
     hitbox;
     constructor(hitbox, position, dir) {
+        this.indices = [];
         this.hitbox = hitbox;
         this.position = position;
         this.dir = dir;
@@ -157,7 +159,6 @@ export class Collidable {
                 const centroidAToCentroidB = refB.position.subtract(refA.position).normalize();
                 const contact = refA.position.add(centroidAToCentroidB.scale(refA.hitbox.radius));
                 return {
-                    colliding: true,
                     axis: normal,
                     overlap,
                     contacts: [contact],
@@ -232,7 +233,7 @@ function projectCheck(axis, refA, refB) {
     if (projA.max < projB.min || projB.max < projA.min)
         return false;
     const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
-    return { colliding: true, overlap, axis, refA, refB };
+    return { overlap, axis, refA, refB };
 }
 function circlePolygonCheck(refA, refB) {
     // get closest point on edge and add to normals

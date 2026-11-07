@@ -5,17 +5,16 @@ import { zipShift } from "../Utils/arrays.js";
 import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
 import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./collisions.js";
-export class Base extends Collidable {
+export class Shapeoid extends Collidable {
     id;
     indices;
     rho;
     mass;
-    momentOfInertia;
+    inertia;
     velocity;
     omega;
     shape;
     trueColor;
-    axesBuffer;
     ticks;
     constructor(position, dir, shape, velocity, rho = 1) {
         const hitbox = shape instanceof Polygon
@@ -29,13 +28,13 @@ export class Base extends Collidable {
         this.rho = rho;
         this.mass = this.shape.area * this.rho;
         if (this.hitbox.type === "Circle") {
-            this.momentOfInertia = 0.5 * this.mass * sq(this.hitbox.radius);
+            this.inertia = 0.5 * this.mass * sq(this.hitbox.radius);
         }
         else if (isPolygonHitbox(this.hitbox)) {
             const loopedVertices = this.hitbox.windingOrder === "CW"
                 ? this.hitbox.vertices.slice().reverse()
                 : this.hitbox.vertices.slice();
-            this.momentOfInertia =
+            this.inertia =
                 zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => ((subArea) => inertia +
                     subArea *
                         (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) *
@@ -44,7 +43,6 @@ export class Base extends Collidable {
         }
         else
             throw "impossible";
-        this.axesBuffer = [];
         if (Settings.initialVelocity) {
             this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
             this.omega = random(-0.15, 0.15);
@@ -90,40 +88,32 @@ export class Base extends Collidable {
         this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir);
     }
     handleCollision(data) {
-        if (!data.colliding)
-            return;
-        const axis = data.axis;
+        const { axis, refA, refB } = data;
         const MTV = data.axis.scale(data.overlap);
-        const baseA = data.refA;
-        const baseB = data.refB;
-        const massA = baseA.mass, massB = baseB.mass;
+        const [massA, massB] = [refA.mass, refB.mass];
         const displacementA = MTV.scale(massB / (massA + massB));
         const displacementB = MTV.scale(massA / (massA + massB));
-        baseA.position = baseA.position.subtract(displacementA);
-        baseB.position = baseB.position.add(displacementB);
-        // get contact points
-        for (const point of data.contacts) {
-            ctx.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y);
+        refA.position = refA.position.subtract(displacementA);
+        refB.position = refB.position.add(displacementB);
+        for (const contact of data.contacts) {
+            ctx.setTransform(1, 0, 0, 1, halfWidth + contact.x, halfHeight + contact.y);
             draw.ellipse(0, 0, 25, 25, rgba(100, 50));
         }
         if (!Settings.collisionImpulse)
             return;
-        for (const contactPoint of data.contacts) {
-            const vectorAC = contactPoint.subtract(baseA.position);
-            const vectorBC = contactPoint.subtract(baseB.position);
-            const contactVelocityA = baseA.velocity.add(vectorAC.perpendicular().scale(baseA.omega));
-            const contactVelocityB = baseB.velocity.add(vectorBC.perpendicular().scale(baseB.omega));
+        for (const contact of data.contacts) {
+            const [vAC, vBC] = [refA, refB].map((ref) => contact.subtract(ref.position));
+            const contactVelocityA = refA.velocity.add(vAC.perpendicular().scale(refA.omega));
+            const contactVelocityB = refB.velocity.add(vBC.perpendicular().scale(refB.omega));
             const velocityAB = contactVelocityB.subtract(contactVelocityA);
-            const inertiaA = baseA.momentOfInertia;
-            const inertiaB = baseB.momentOfInertia;
             const impulseScalar = velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
                 (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +
-                    sq(vectorAC.crossProduct(axis)) / inertiaA +
-                    sq(vectorBC.crossProduct(axis)) / inertiaB);
-            baseA.velocity = baseA.velocity.subtract(axis.scale(impulseScalar / massA));
-            baseA.omega += (vectorAC.crossProduct(axis) * impulseScalar) / inertiaA;
-            baseB.velocity = baseB.velocity.add(axis.scale(impulseScalar / massB));
-            baseB.omega -= (vectorBC.crossProduct(axis) * impulseScalar) / inertiaB;
+                    sq(vAC.crossProduct(axis)) / refA.inertia +
+                    sq(vBC.crossProduct(axis)) / refB.inertia);
+            refA.velocity = refA.velocity.subtract(axis.scale(impulseScalar / massA));
+            refA.omega += (vAC.crossProduct(axis) * impulseScalar) / refA.inertia;
+            refB.velocity = refB.velocity.add(axis.scale(impulseScalar / massB));
+            refB.omega -= (vBC.crossProduct(axis) * impulseScalar) / refB.inertia;
         }
     }
 }

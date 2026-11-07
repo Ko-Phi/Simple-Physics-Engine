@@ -5,7 +5,6 @@ import * as Settings from "../Data/world.js"
 import { Vector, rgba, sq, constrain } from "../Utils/math.js"
 
 export type Collision<A extends Collidable, B extends Collidable> = {
-  colliding: true
   axis: Vector
   overlap: number
   contacts: Vector[]
@@ -13,7 +12,6 @@ export type Collision<A extends Collidable, B extends Collidable> = {
   refB: B
 }
 type Intersection<A extends Collidable, B extends Collidable> = {
-  colliding: true
   axis: Vector
   overlap: number
   refA: A
@@ -160,10 +158,12 @@ export class CircleHitbox extends Circle implements AHitbox {
 }
 
 export class Collidable {
+  indices: Vector[]
   position: Vector
   dir: number
   hitbox: Hitbox
   constructor(hitbox: Hitbox, position: Vector, dir: number) {
+    this.indices = []
     this.hitbox = hitbox
     this.position = position
     this.dir = dir
@@ -172,14 +172,12 @@ export class Collidable {
     const refA = this
     const tCentroidA = refA.hitbox.centroid.add(refA.position)
     const tCentroidB = refB.hitbox.centroid.add(refB.position)
-
     // common seperation axis first
     const axes = [
       tCentroidB.subtract(tCentroidA).normalize(),
       ...refA.hitbox.normals,
       ...refB.hitbox.normals,
     ]
-
     // Circle-Circle test
     if (refA.hitbox.type === refB.hitbox.type && refA.hitbox.type === "Circle") {
       const sqDistance = refA.hitbox.centroid
@@ -195,7 +193,6 @@ export class Collidable {
         const centroidAToCentroidB = refB.position.subtract(refA.position).normalize()
         const contact = refA.position.add(centroidAToCentroidB.scale(refA.hitbox.radius))
         return {
-          colliding: true,
           axis: normal,
           overlap,
           contacts: [contact],
@@ -204,15 +201,12 @@ export class Collidable {
         }
       }
     }
-
     // Base Checks
     const collisions: Array<Intersection<typeof this, B> | Seperation> = axes.map((axis) =>
       projectCheck(axis, refA, refB)
     )
-
     // Circle-Polygon "Edge" Case
     if (refA.hitbox.type !== refB.hitbox.type) collisions.push(circlePolygonCheck(refA, refB))
-
     // Check for seperation
     const min = collisions.reduce((prev, curr) =>
       prev === false || curr === false ? false : curr.overlap < prev.overlap ? curr : prev
@@ -277,12 +271,10 @@ function projectCheck<A extends Collidable, B extends Collidable>(
   // project each hitbox's vertices
   const projA = refA.hitbox.project(axis, refA.position)
   const projB = refB.hitbox.project(axis, refB.position)
-
   // check if seperate
   if (projA.max < projB.min || projB.max < projA.min) return false
-
   const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-  return { colliding: true, overlap, axis, refA, refB }
+  return { overlap, axis, refA, refB }
 }
 
 function circlePolygonCheck<A extends Collidable, B extends Collidable>(
@@ -298,7 +290,6 @@ function circlePolygonCheck<A extends Collidable, B extends Collidable>(
   const centroid = positionC.add(circle.centroid)
   const closestPoint = polygon.closestPointToCentroidOf(positionC)
   const axis = closestPoint.subtract(centroid).normalize()
-
   return projectCheck(axis, refA, refB)
 }
 
