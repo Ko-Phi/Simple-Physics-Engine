@@ -27,7 +27,7 @@ export const keys: Keys = {
 window.addEventListener("keydown", (event) => {
   if (event.key in keys) {
     keys[event.key] = true
-    event.preventDefault() // Prevents page scrolling
+    event.preventDefault()
   }
 })
 window.addEventListener("keyup", (event) => {

@@ -40,6 +40,7 @@ export class Draw {
   }
   line(x1: number, y1: number, x2: number, y2: number, weight?: number, stroke?: string) {
     this.setSettings("#00000000", weight, stroke)
+    this.ctx.closePath()
     this.ctx.beginPath()
     this.ctx.moveTo(x1, y1)
     this.ctx.lineTo(x1, y1)

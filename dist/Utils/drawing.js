@@ -22,6 +22,7 @@ export class Draw {
     }
     line(x1, y1, x2, y2, weight, stroke) {
         this.setSettings("#00000000", weight, stroke);
+        this.ctx.closePath();
         this.ctx.beginPath();
         this.ctx.moveTo(x1, y1);
         this.ctx.lineTo(x1, y1);

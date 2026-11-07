@@ -115,6 +115,9 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
   }
   draw() {
     this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir)
+
+    //ctx.setTransform(1, 0, 0, 1, halfWidth + this.position.x, halfHeight + this.position.y)
+    //draw.line(0, 0, this.velocity.x * 10, this.velocity.y * 10, 2, rgba(100))
   }
   handleCollision(data: Collision<Shapeoid, Shapeoid>) {
     const { axis, refA, refB } = data

@@ -20,66 +20,8 @@ for (let i = 0; i < Settings.insertCount; i++) {
 }
 if (Settings.insertCount === 0)
     boxes.push(new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Shapeoid(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
-const displayPeriod = 60;
-class PerformanceProfile {
-    metrics;
-    ticks;
-    constructor() {
-        this.metrics = {};
-        this.ticks = 0;
-    }
-    getTime() {
-        const result = performance.now() - this.ticks;
-        this.ticks = performance.now();
-        return result;
-    }
-    updateMetric(key) {
-        if (this.metrics[key] === undefined) {
-            this.metrics[key] = {};
-            this.metrics[key].buffer = [];
-        }
-        let metric = this.metrics[key];
-        metric.buffer[0] += this.getTime();
-    }
-    getMetricData(key) {
-        let buffer = this.metrics[key].buffer;
-        const average = buffer.reduce((acc, time) => acc + time) / buffer.length;
-        let percentage = 100;
-        if (key !== "total")
-            percentage = (average / this.metrics.total.savedData.average) * 100;
-        return {
-            min: Math.min(...buffer),
-            max: Math.max(...buffer),
-            average: average,
-            percentage: percentage,
-        };
-    }
-    // for next frame
-    resetMetrics() {
-        for (const key in this.metrics) {
-            const metric = this.metrics[key];
-            if (metric.buffer.unshift(0) > displayPeriod) {
-                metric.buffer.pop();
-            }
-        }
-    }
-    getTotal() {
-        let sum = 0;
-        for (const key in this.metrics) {
-            if (key === "total") {
-                continue;
-            }
-            sum += this.metrics[key].buffer[0];
-        }
-        if (this.metrics.total === undefined) {
-            this.metrics.total = {};
-            this.metrics.total.buffer = [];
-        }
-        const total = this.metrics.total;
-        total.buffer[0] = sum;
-    }
-}
-const Perf = new PerformanceProfile();
+import { PerformanceProfile } from "./Utils/profiler.js";
+const Perf = new PerformanceProfile("boxUpdate", "aabbUpdate", "gridUpdate", "gridQuery", "priorCheck", "hitboxUpdate", "satCheck", "drawBoxes", "handleCollisions");
 let ticksSinceInput = 0;
 let ticks = 0;
 let collisions = [];
@@ -186,24 +128,15 @@ function drawLoop(timestamp) {
     Perf.updateMetric("handleCollisions");
     Perf.getTotal();
     const totalCells = (halfWidth * 2 * (halfHeight * 2)) / Settings.gridSize ** 2;
-    const countMetrics = [
-        "Cells Filled",
-        world.grid.size + " / " + totalCells,
-        "Cells Checked",
-        world.cellsChecked + " / " + totalCells,
-        "SAT Calls",
-        collisionChecks,
-        "Object Count",
-        boxes.length,
-        "Collision Count",
-        collisions.length,
-        "Kinetic Energy",
-        KE.toFixed(3),
-    ];
-    // textAlign(LEFT, TOP)
-    // textFont(fontBold, 24)
+    const countMetrics = {
+        "Cells Filled": world.grid.size + " / " + totalCells,
+        "Cells Checked": world.cellsChecked + " / " + totalCells,
+        "SAT Calls": collisionChecks,
+        "Object Count": boxes.length,
+        "Collision Count": collisions.length,
+        "Kinetic Energy": KE.toFixed(3),
+    };
     ctx.font = "bold 24px Arial";
-    const dataToDisplay = ["average", "max", "percentage"];
     const margin = 4;
     const padding = 8;
     const dataWidth = 140;
@@ -211,73 +144,21 @@ function drawLoop(timestamp) {
     const columnGap = 16;
     //const rowHeight = textAscent() * 2
     const rowHeight = 15 * 2;
-    const initialRowGap = 16;
     const rowGap = 0;
     const start = margin + padding;
-    const metricDisplayWidth = padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding;
-    ctx.resetTransform();
-    const metricCount = Object.keys(Perf.metrics).length;
-    draw.rect(margin, margin, metricDisplayWidth, padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding, rgba(0, 120));
-    if (ticks % displayPeriod === 0) {
-        const totalData = Perf.getMetricData("total");
-        Perf.metrics.total.savedData = Object.assign({}, totalData);
-        for (const key in Perf.metrics) {
-            const metricData = Perf.getMetricData(key);
-            Perf.metrics[key].savedData = Object.assign({}, metricData);
-        }
-    }
-    let dx, dy;
-    dy = dx = start;
-    draw.text("Key", dx, dy);
-    dx += keyWidth + columnGap;
-    for (const dataKey of dataToDisplay) {
-        draw.text(dataKey[0].toUpperCase() + dataKey.slice(1), dx, dy);
-        dx += dataWidth + columnGap;
-    }
-    draw.rect(start, start + rowHeight, dataToDisplay.length * (dataWidth + columnGap) + keyWidth, 3, rgba(0, 120));
-    //textFont(font, 24)
-    ctx.font = "normal 24px Arial";
-    dx = start + keyWidth + columnGap;
-    dy += rowHeight + initialRowGap;
-    let i = 0;
-    for (const key in Perf.metrics) {
-        let ddx = dx;
-        const metric = Perf.metrics[key].savedData;
-        if (i % 2 === 0)
-            draw.rect(margin, dy, metricDisplayWidth, rowHeight, rgba(0, 50));
-        let formattedKey = [];
-        for (let i = 0; i < key.length; i++) {
-            const character = key[i];
-            if (i === 0) {
-                formattedKey.push(character.toUpperCase());
-                continue;
-            }
-            if (character.toUpperCase() === character)
-                formattedKey.push(" ", character);
-            else
-                formattedKey.push(character);
-        }
-        draw.text(`${formattedKey.join("")}:`, start, dy);
-        for (const dataKey of dataToDisplay) {
-            let data = metric[dataKey];
-            const unit = dataKey === "percentage" ? "%" : "ms";
-            data = isNaN(data) ? displayPeriod - ticks / dt : `${data.toFixed(3)} ${unit}`;
-            draw.text(data, ddx, dy);
-            ddx += dataWidth + columnGap;
-        }
-        dy += rowHeight + rowGap;
-        i++;
-    }
-    const counterDisplayHeight = padding + (countMetrics.length / 2) * (rowHeight + rowGap) + padding;
+    Perf.draw(["average", "max", "percentage"], dt);
+    const counterDisplayHeight = padding + Object.keys(countMetrics).length * (rowHeight + rowGap) + padding;
     const counterDisplayWidth = padding + keyWidth + columnGap + dataWidth + padding;
     draw.rect(margin, height - margin - counterDisplayHeight, counterDisplayWidth, counterDisplayHeight, rgba(0, 120));
-    dy = height - margin - counterDisplayHeight + padding;
-    for (let i = 0; i < countMetrics.length; i += 2) {
-        if (i % 4 === 0)
+    let dy = height - margin - counterDisplayHeight + padding;
+    let i = 0;
+    for (const metric in countMetrics) {
+        if (i % 2 === 0)
             draw.rect(margin, dy, counterDisplayWidth, rowHeight, rgba(0, 0, 0, 50));
-        draw.text(countMetrics[i] + ":", start, dy);
-        draw.text(countMetrics[i + 1] + "", start + keyWidth + columnGap, dy);
+        draw.text(metric + ":", start, dy);
+        draw.text(countMetrics[metric] + "", start + keyWidth + columnGap, dy);
         dy += rowHeight + rowGap;
+        i++;
     }
     ticks += 1;
     requestAnimationFrame(drawLoop);
