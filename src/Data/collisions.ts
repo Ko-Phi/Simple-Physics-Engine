@@ -8,9 +8,18 @@ export type Collision<A extends Collidable, B extends Collidable> = {
   colliding: true
   axis: Vector
   overlap: number
+  contacts: Vector[]
   refA: A
   refB: B
 }
+type Intersection<A extends Collidable, B extends Collidable> = {
+  colliding: true
+  axis: Vector
+  overlap: number
+  refA: A
+  refB: B
+}
+
 type Seperation = false
 
 export class Aabb {
@@ -220,7 +229,7 @@ export class Collidable {
     this.position = position
     this.dir = dir
   }
-  checkCollision<B extends Collidable>(refB: B): Collision<this, B> | Seperation {
+  checkCollision<B extends Collidable>(refB: B): Collision<typeof this, B> | Seperation {
     const refA = this
     const tCentroidA = refA.hitbox.centroid.add(refA.position)
     const tCentroidB = refB.hitbox.centroid.add(refB.position)
@@ -244,10 +253,13 @@ export class Collidable {
       } else {
         const overlap = Math.sqrt(sqDistance) - radiiSum
         const normal = tCentroidA.subtract(tCentroidB).normalize()
+        const centroidAToCentroidB = refB.position.subtract(refA.position).normalize()
+        const contact = refA.position.add(centroidAToCentroidB.scale(refA.hitbox.radius))
         return {
           colliding: true,
           axis: normal,
           overlap,
+          contacts: [contact],
           refA: refA,
           refB: refB,
         }
@@ -255,7 +267,7 @@ export class Collidable {
     }
 
     // Base Checks
-    const collisions: Array<Collision<this, B> | Seperation> = axes.map((axis) =>
+    const collisions: Array<Intersection<typeof this, B> | Seperation> = axes.map((axis) =>
       projectCheck(axis, refA, refB)
     )
 
@@ -272,7 +284,49 @@ export class Collidable {
     const direction = tCentroidB.subtract(tCentroidA)
     if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
 
-    return min
+    let contactPoints: Vector[] = []
+    const collisionType = refA.hitbox.type + "-" + refB.hitbox.type
+    if (collisionType === "Polygon-Polygon") {
+      const [polyA, polyB] = [refA.hitbox, refB.hitbox] as [PolygonHitbox, PolygonHitbox]
+      /* Visualization:
+           A is the checked vertex. BC is the current edge of the other base. P is the closest point
+             B
+            /|
+           A-P
+            \|
+             C
+        */
+
+      // base loop -> vertex -> side loop
+      zipShift([polyA, polyB]).forEach(([hitbox, otherHitbox]) => {
+        const vertices = hitbox.transformedVertices
+        const otherVertices = otherHitbox.transformedVertices
+        vertices.forEach((vertexA) => {
+          zipShift(otherVertices).forEach(([vertexB, vertexC]) => {
+            const sideBC = vertexC.subtract(vertexB)
+            const sideBA = vertexA.subtract(vertexB)
+            let projection = constrain(sideBA.dotProduct(sideBC) / sideBC.getSqMag(), 0, 1)
+            const point = vertexB.add(sideBC.scale(projection))
+            const sideAP = point.subtract(vertexA)
+            const distanceSquared = sideAP.getSqMag()
+            if (distanceSquared < 1 && contactPoints.length < 2) {
+              if (contactPoints.length === 1) {
+                if (contactPoints[0].subtract(point).getSqMag() > 0.01) contactPoints.push(point)
+              } else contactPoints.push(point)
+            }
+          })
+        })
+      })
+      if (contactPoints.length === 0)
+        contactPoints.push(polyA.closestPointToCentroidOf(refB.position))
+    } else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
+      let [circleBase, polyBox] = (
+        refA.hitbox.type === "Circle" ? [refA, refB.hitbox] : [refB, refA.hitbox]
+      ) as [Collidable, PolygonHitbox]
+      contactPoints.push(polyBox.closestPointToCentroidOf(circleBase.position))
+    }
+
+    return { ...min, contacts: contactPoints }
   }
 }
 
@@ -280,7 +334,7 @@ function projectCheck<A extends Collidable, B extends Collidable>(
   axis: Vector,
   refA: A,
   refB: B
-): Collision<A, B> | Seperation {
+): Intersection<A, B> | Seperation {
   // project each hitbox's vertices
   const projA = refA.hitbox.project(axis, refA.position)
   const projB = refB.hitbox.project(axis, refB.position)
@@ -295,7 +349,7 @@ function projectCheck<A extends Collidable, B extends Collidable>(
 function circlePolygonCheck<A extends Collidable, B extends Collidable>(
   refA: A,
   refB: B
-): Collision<A, B> | Seperation {
+): Intersection<A, B> | Seperation {
   // get closest point on edge and add to normals
   let [circle, positionC, polygon] =
     refA.hitbox.type === "Circle"

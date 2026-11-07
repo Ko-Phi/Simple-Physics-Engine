@@ -10,7 +10,6 @@ import {
   CollisionHandler,
   Collision,
 } from "./collisions.js"
-import { zipShift } from "../Utils/arrays.js"
 
 export class Base extends Collidable implements CollisionHandler<Base, Base> {
   id: number
@@ -95,7 +94,6 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
     const MTV = data.axis.scale(data.overlap)
     const baseA = data.refA
     const baseB = data.refB
-    const bases = [baseA, baseB]
 
     const massA = baseA.hitbox.mass,
       massB = baseB.hitbox.mass
@@ -105,65 +103,14 @@ export class Base extends Collidable implements CollisionHandler<Base, Base> {
     baseA.position = baseA.position.subtract(displacementA)
     baseB.position = baseB.position.add(displacementB)
     // get contact points
-    let contactPoints: Vector[] = []
-    const collisionType = baseA.hitbox.type + "-" + baseB.hitbox.type
-    if (collisionType === "Polygon-Polygon") {
-      /* Visualization:
-           A is the checked vertex. BC is the current edge of the other base. P is the closest point
-              /B
-             / |
-            /  |
-           A---P
-            \  |
-             \ |
-              \C
-        */
 
-      // base loop
-      zipShift(bases).forEach(([base, otherBase]) => {
-        const vertices = base.hitbox.transformedVertices
-        const otherVertices = otherBase.hitbox.transformedVertices
-        // vertex loop
-        vertices.forEach((vertexA) => {
-          // side loop
-          otherVertices.forEach((vertexB, index, bVertices) => {
-            const vertexC = bVertices[(index + 1) % bVertices.length]
-            const sideBC = vertexC.subtract(vertexB)
-            const sideBA = vertexA.subtract(vertexB)
-
-            let projection = sideBA.dotProduct(sideBC) / sideBC.getSqMag()
-            projection = constrain(projection, 0, 1)
-
-            const point = vertexB.add(sideBC.scale(projection))
-            const sideAP = point.subtract(vertexA)
-            const distanceSquared = sideAP.getSqMag()
-            if (distanceSquared < 1 && contactPoints.length < 2) {
-              if (contactPoints.length === 1) {
-                if (contactPoints[0].subtract(point).getSqMag() > 0.01) contactPoints.push(point)
-              } else contactPoints.push(point)
-            }
-          })
-        })
-      })
-      if (contactPoints.length === 0)
-        contactPoints.push(baseA.hitbox.closestPointToCentroidOf(baseB.position))
-    } else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
-      let circleBase, otherBase
-      if (baseA.hitbox.type === "Circle") [circleBase, otherBase] = [baseA, baseB]
-      else [circleBase, otherBase] = [baseB, baseA]
-      contactPoints.push(otherBase.hitbox.closestPointToCentroidOf(circleBase.position))
-    } else if (collisionType === "Circle-Circle") {
-      const centroidAToCentroidB = baseB.position.subtract(baseA.position).normalize()
-      contactPoints.push(baseA.position.add(centroidAToCentroidB.scale(baseA.hitbox.radius)))
-    }
-
-    for (const point of contactPoints) {
+    for (const point of data.contacts) {
       ctx.setTransform(1, 0, 0, 1, halfWidth + point.x, halfHeight + point.y)
       draw.ellipse(0, 0, 25, 25, rgba(100, 50))
     }
     if (!Settings.collisionImpulse) return
 
-    for (const contactPoint of contactPoints) {
+    for (const contactPoint of data.contacts) {
       const vectorAC = contactPoint.subtract(baseA.position)
       const vectorBC = contactPoint.subtract(baseB.position)
       const contactVelocityA = baseA.velocity.add(vectorAC.perpendicular().scale(baseA.omega))
