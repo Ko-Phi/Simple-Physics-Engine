@@ -1,4 +1,4 @@
-import { displayGridCheck } from "../../Data/world.js"
+import { cam, displayGridCheck } from "../../Data/world.js"
 import { Draw } from "../../Utils/drawing.js"
 import { Collidable } from "./collisions.js"
 import { Vector, rgba } from "../../Utils/math.js"
@@ -57,7 +57,14 @@ export class SpatialHashGrid {
 
     // iterate over spanned area for clients
     if (displayGridCheck) {
-      this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2, this.dimensions.y / 2)
+      this.drawer.ctx.setTransform(
+        1,
+        0,
+        0,
+        1,
+        this.dimensions.x / 2 - cam.position.x,
+        this.dimensions.y / 2 - cam.position.y
+      )
       this.drawer.rect(
         ...([i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1].map((n) => n * this.cellSize) as NArray<
           number,
@@ -112,7 +119,14 @@ export class SpatialHashGrid {
     }
   }
   draw() {
-    this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2, this.dimensions.y / 2)
+    this.drawer.ctx.setTransform(
+      1,
+      0,
+      0,
+      1,
+      this.dimensions.x / 2 - cam.position.x,
+      this.dimensions.y / 2 - cam.position.y
+    )
     for (
       let x = Math.ceil(-this.dimensions.x / this.cellSize) * this.cellSize;
       x <= this.dimensions.x / 2;

@@ -1,5 +1,5 @@
-import { keys, focus } from "./world.js"
-import { draw, ctx, newid, halfWidth, halfHeight } from "./world.js"
+import { outline, keys, focus } from "./world.js"
+import { draw, ctx, newid, halfWidth, halfHeight, cam } from "./world.js"
 import * as Settings from "./world.js"
 import { Vector, random, sq, rgba } from "../Utils/math.js"
 import { zipShift } from "../Utils/arrays.js"
@@ -78,6 +78,7 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
   }
   getInput() {
     if (focus !== this.id) return
+    if (Settings.cameraTrack && cam.target !== this) cam.target = this
     const input_x = +keys.d - +keys.a
     const input_y = +keys.s - +keys.w
     const input_dir = +keys.e - +keys.q
@@ -118,7 +119,17 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     else this.shape.color = new Color([150, 200, 150])
   }
   draw() {
-    this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir)
+    const [dx, dy] = [halfWidth - cam.position.x, halfHeight - cam.position.y]
+    this.shape.draw(this.position.x + dx, this.position.y + dy, this.dir)
+    draw.ellipse(
+      this.position.x + this.hitbox.centroid.x + dx,
+      this.position.y + this.hitbox.centroid.y + dy,
+      5,
+      5,
+      rgba(211, 175, 55),
+      1,
+      outline
+    )
 
     //ctx.setTransform(1, 0, 0, 1, halfWidth + this.position.x, halfHeight + this.position.y)
     //draw.line(0, 0, this.velocity.x * 10, this.velocity.y * 10, 2, rgba(100))
@@ -134,7 +145,14 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     refB.position = refB.position.add(displacementB)
 
     for (const contact of data.contacts) {
-      ctx.setTransform(1, 0, 0, 1, halfWidth + contact.x, halfHeight + contact.y)
+      ctx.setTransform(
+        1,
+        0,
+        0,
+        1,
+        halfWidth + contact.x - cam.position.x,
+        halfHeight + contact.y - cam.position.y
+      )
       draw.ellipse(0, 0, 25, 25, rgba(100, 50))
     }
     if (!Settings.collisionImpulse) return

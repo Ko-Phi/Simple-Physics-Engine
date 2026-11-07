@@ -65,6 +65,7 @@ export class Polygon implements AShape {
     ctx.setTransform(1, 0, 0, 1, dx, dy)
     ctx.transform(Math.cos(θ), Math.sin(θ), -Math.sin(θ), Math.cos(θ), 0, 0)
     drawer.polygon(this.vertices, this.color.cachedValue, 1, outline)
+    ctx.resetTransform()
   }
 }
 
@@ -104,6 +105,7 @@ export class Circle implements AShape {
       0.5,
       outline
     )
+    ctx.resetTransform()
   }
 }
 

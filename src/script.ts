@@ -1,7 +1,17 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js"
 import { Color } from "./Data/color.js"
 
-import { canvas, draw, ctx, outline, width, height, halfHeight, halfWidth } from "./Data/world.js"
+import {
+  cam,
+  canvas,
+  draw,
+  ctx,
+  outline,
+  width,
+  height,
+  halfHeight,
+  halfWidth,
+} from "./Data/world.js"
 import * as Settings from "./Data/world.js"
 
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js"
@@ -95,6 +105,7 @@ let KE = 0
 
 let lastTime = 0
 function drawLoop(timestamp: number) {
+  cam.update()
   if (ctx === null) throw "e"
   ctx.resetTransform()
   let dt = timestamp - lastTime
@@ -175,7 +186,7 @@ function drawLoop(timestamp: number) {
 
   // draw them boxes
   for (const box of boxes) {
-    ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
+    ctx.setTransform(1, 0, 0, 1, halfWidth - cam.position.x, halfHeight - cam.position.y)
     if (Settings.drawAsCircles) {
       const diameter = box.hitbox.aabb.width
       draw.ellipse(
@@ -189,16 +200,16 @@ function drawLoop(timestamp: number) {
       )
     } else box.draw()
 
-    ctx.setTransform(1, 0, 0, 1, halfWidth, halfHeight)
-    draw.ellipse(
-      box.position.x + box.hitbox.centroid.x,
-      box.position.y + box.hitbox.centroid.y,
-      5,
-      5,
-      rgba(211, 175, 55),
-      1,
-      outline
-    )
+    //ctx.setTransform(1, 0, 0, 1, halfWidth - cam.position.x, halfHeight - cam.position.y)
+    //draw.ellipse(
+    //  box.position.x + box.hitbox.centroid.x,
+    //  box.position.y + box.hitbox.centroid.y,
+    //  5,
+    //  5,
+    //  rgba(211, 175, 55),
+    //  1,
+    //  outline
+    //)
   }
   Perf.updateMetric("drawBoxes")
 

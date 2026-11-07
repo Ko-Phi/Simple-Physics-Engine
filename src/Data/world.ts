@@ -1,5 +1,5 @@
 import { Draw } from "../Utils/drawing.js"
-import { rgba } from "../Utils/math.js"
+import { rgba, Vector } from "../Utils/math.js"
 
 export const outline = rgba(0)
 export const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement
@@ -59,3 +59,29 @@ export const scaleVariance = 0
 export const drawAsCircles = false // shapes drawn as circles. Increases performance
 export const displayAABB = false // aabbs drawn. Uses rect() so not very good for performance
 export const displayGridCheck = false // checked grids are highlighted. Very performance intensive
+export const cameraTrack = true // track them shapes
+
+class Camera<Type extends { position: Vector }> {
+  position: Vector
+  target: Type
+  smoothing: number = 0.4
+  trauma: number = 0
+  constructor(target: Type, position: Vector = target.position) {
+    this.target = target
+    this.position = position
+  }
+  update() {
+    this.position = this.position.add(
+      this.target.position.subtract(this.position).scale(this.smoothing)
+    )
+    //this.position = this.position.add(
+    //  new Vector(
+    //    noise(millis() * 0.02, 1) * (Math.random() < 0.5 ? -1 : 1),
+    //    noise(millis() * 0.02, 10) * (Math.random() < 0.5 ? -1 : 1)
+    //  ).scale(Math.pow(this.trauma, 3) * 60)
+    //)
+    this.trauma = Math.max(this.trauma - 1 / 120, 0)
+  }
+}
+
+export const cam = new Camera({ position: new Vector(0, 0) })

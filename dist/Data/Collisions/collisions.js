@@ -1,6 +1,6 @@
 import { Polygon, Circle } from "../../Data/shape.js";
 import { zipShift, zipWith, shift } from "../../Utils/arrays.js";
-import { draw, ctx, halfHeight, halfWidth } from "../../Data/world.js";
+import { cam, draw, ctx, halfHeight, halfWidth } from "../../Data/world.js";
 import * as Settings from "../../Data/world.js";
 import { Vector, rgba, sq, constrain } from "../../Utils/math.js";
 export class Aabb {
@@ -13,7 +13,7 @@ export class Aabb {
         this.centroid = centroid;
     }
     draw(position) {
-        ctx.setTransform(1, 0, 0, 1, this.centroid.x + position.x + halfWidth, this.centroid.y + position.y + halfHeight);
+        ctx.setTransform(1, 0, 0, 1, this.centroid.x + position.x + halfWidth - cam.position.x, this.centroid.y + position.y + halfHeight - cam.position.y);
         draw.rect(-this.width / 2, -this.height / 2, this.width, this.height, rgba(128, 50));
         draw.ellipse(0, 0, this.width, this.width, rgba(128, 50), 0, rgba(0, 0));
     }

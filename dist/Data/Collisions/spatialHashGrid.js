@@ -1,4 +1,4 @@
-import { displayGridCheck } from "../../Data/world.js";
+import { cam, displayGridCheck } from "../../Data/world.js";
 import { Vector, rgba } from "../../Utils/math.js";
 export class SpatialHashGrid {
     cellsChecked;
@@ -49,7 +49,7 @@ export class SpatialHashGrid {
         const i2 = this.getIndex(x + w / 2, y + h / 2);
         // iterate over spanned area for clients
         if (displayGridCheck) {
-            this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2, this.dimensions.y / 2);
+            this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2 - cam.position.x, this.dimensions.y / 2 - cam.position.y);
             this.drawer.rect(...[i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1].map((n) => n * this.cellSize), rgba(100, 30));
         }
         let clients = [];
@@ -99,7 +99,7 @@ export class SpatialHashGrid {
         }
     }
     draw() {
-        this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2, this.dimensions.y / 2);
+        this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2 - cam.position.x, this.dimensions.y / 2 - cam.position.y);
         for (let x = Math.ceil(-this.dimensions.x / this.cellSize) * this.cellSize; x <= this.dimensions.x / 2; x += this.cellSize)
             this.drawer.line(x, this.dimensions.y, x, -this.dimensions.y, 1, rgba(204));
         for (let y = Math.ceil(-this.dimensions.y / this.cellSize) * this.cellSize; y <= this.dimensions.y / 2; y += this.cellSize)
