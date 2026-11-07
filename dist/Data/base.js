@@ -1,3 +1,4 @@
+import { keys, focus } from "./world.js";
 import { draw, ctx, newid, halfWidth, halfHeight } from "./world.js";
 import * as Settings from "./world.js";
 import { Vector, random, sq, rgba } from "../Utils/math.js";
@@ -54,14 +55,14 @@ export class Shapeoid extends Collidable {
         this.ticks = Math.floor(random(0, 50));
     }
     getInput() {
-        // const input_x = (keys[RIGHT] || keys[68]) - (keys[LEFT] || keys[65])
-        // const input_y = (keys[DOWN] || keys[83]) - (keys[UP] || keys[87])
-        // const input_dir = keys[69] - keys[81]
-        // const translation = new Vector(input_x, input_y).normalize()
-        // if (this.velocity.getMag() < 3) this.velocity = this.velocity.add(translation.divide(5))
-        // else this.velocity = this.velocity.normalize().scale(2.9)
-        // if (Math.abs(this.omega) < 0.1) this.omega += input_dir / 100
-        // else this.omega = Math.sign(this.omega) * 0.09
+        if (focus !== this.id)
+            return;
+        const input_x = +keys.d - +keys.a;
+        const input_y = +keys.s - +keys.w;
+        const input_dir = +keys.e - +keys.q;
+        const translation = new Vector(input_x, input_y).normalize();
+        this.velocity = this.velocity.add(translation.divide(5));
+        this.omega += input_dir / 1000;
     }
     update(dt) {
         this.ticks++;
@@ -82,7 +83,10 @@ export class Shapeoid extends Collidable {
             this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
             this.omega = random(-0.01, 0.01) * Settings.scale;
         }
-        this.shape.color = this.trueColor;
+        if (focus !== this.id)
+            this.shape.color = this.trueColor;
+        else
+            this.shape.color = new Color([150, 200, 150]);
     }
     draw() {
         this.shape.draw(this.position.x + halfWidth, this.position.y + halfHeight, this.dir);

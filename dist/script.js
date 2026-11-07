@@ -114,6 +114,7 @@ function drawLoop(timestamp) {
     for (const box of boxes) {
         KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2;
         box.update(dt);
+        box.getInput();
         Perf.updateMetric("boxUpdate");
         box.hitbox.shallowUpdate(box.position, box.dir);
         Perf.updateMetric("aabbUpdate");

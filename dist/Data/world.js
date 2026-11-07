@@ -10,6 +10,25 @@ export const [width, height] = [canvas.width, canvas.height];
 export const [halfWidth, halfHeight] = [width / 2, height / 2];
 let idCount = 0;
 export const newid = () => idCount++;
+export const focus = 0;
+export const keys = {
+    ArrowUp: false,
+};
+"abcdefghijklmnopqrstuvwxyz ".split("").forEach((c) => {
+    keys[c] = false;
+    keys[c.toUpperCase()] = false;
+});
+window.addEventListener("keydown", (event) => {
+    if (event.key in keys) {
+        keys[event.key] = true;
+        event.preventDefault(); // Prevents page scrolling
+    }
+});
+window.addEventListener("keyup", (event) => {
+    if (event.key in keys) {
+        keys[event.key] = false;
+    }
+});
 export const period = 16.67;
 export const initialVelocity = true; // objects begin with an intial velocity
 export const periodicVelocityShifts = false; // velocity randomized periodically
