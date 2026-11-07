@@ -145,9 +145,6 @@ export class CircleHitbox extends Circle {
             max: projection + this.radius,
         };
     }
-    closestPointToCentroidOf() {
-        throw "Uncalleable";
-    }
 }
 export class Collidable {
     position;
@@ -263,9 +260,9 @@ function projectCheck(axis, refA, refB) {
 }
 function circlePolygonCheck(refA, refB) {
     // get closest point on edge and add to normals
-    let [circle, positionC, polygon] = refA.hitbox.type === "Circle"
+    let [circle, positionC, polygon] = (refA.hitbox.type === "Circle"
         ? [refA.hitbox, refA.position, refB.hitbox]
-        : [refB.hitbox, refB.position, refA.hitbox];
+        : [refB.hitbox, refB.position, refA.hitbox]);
     const centroid = positionC.add(circle.centroid);
     const closestPoint = polygon.closestPointToCentroidOf(positionC);
     const axis = closestPoint.subtract(centroid).normalize();

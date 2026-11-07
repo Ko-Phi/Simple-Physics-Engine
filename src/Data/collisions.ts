@@ -63,7 +63,6 @@ export abstract class AHitbox {
   abstract shallowUpdate: (position: Vector, dir: number) => void
   abstract narrowUpdate: (position: Vector, dir: number) => void
   abstract project: (axis: Vector, position: Vector) => { min: number; max: number }
-  abstract closestPointToCentroidOf: (position: Vector) => Vector
 }
 
 export class PolygonHitbox extends Polygon implements AHitbox {
@@ -215,9 +214,6 @@ export class CircleHitbox extends Circle implements AHitbox {
       max: projection + this.radius,
     }
   }
-  closestPointToCentroidOf(): Vector {
-    throw "Uncalleable"
-  }
 }
 
 export class Collidable {
@@ -351,10 +347,11 @@ function circlePolygonCheck<A extends Collidable, B extends Collidable>(
   refB: B
 ): Intersection<A, B> | Seperation {
   // get closest point on edge and add to normals
-  let [circle, positionC, polygon] =
+  let [circle, positionC, polygon] = (
     refA.hitbox.type === "Circle"
       ? [refA.hitbox, refA.position, refB.hitbox]
       : [refB.hitbox, refB.position, refA.hitbox]
+  ) as [CircleHitbox, Vector, PolygonHitbox]
   const centroid = positionC.add(circle.centroid)
   const closestPoint = polygon.closestPointToCentroidOf(positionC)
   const axis = closestPoint.subtract(centroid).normalize()
