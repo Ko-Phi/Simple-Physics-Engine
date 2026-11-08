@@ -1,4 +1,4 @@
-import { ctx, draw as drawer, outline } from "./world.js";
+import { ctx, draw as drawer, outline } from "../Globals/init.js";
 import { zipShift } from "../Utils/arrays.js";
 import { Color } from "./color.js";
 import { Vector, sq } from "../Utils/math.js";

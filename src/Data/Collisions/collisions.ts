@@ -1,7 +1,7 @@
 import { Polygon, Circle } from "../../Data/shape.js"
 import { zipShift, zipWith, shift } from "../../Utils/arrays.js"
-import { cam, draw, ctx, halfHeight, halfWidth } from "../../Data/world.js"
-import * as Settings from "../../Data/world.js"
+import { draw, ctx } from "../../Globals/init.js"
+import * as Settings from "../../Globals/settings.js"
 import { Vector, rgba, sq, constrain } from "../../Utils/math.js"
 
 export type Collision<A extends Collidable, B extends Collidable> = {

@@ -1,8 +1,7 @@
-import { cam, ctx, displayGridCheck } from "../../Data/world.js"
-import { Draw } from "../../Utils/drawing.js"
+import { cam, ctx, draw } from "../../Globals/init.js"
+import { displayGridCheck } from "../../Globals/settings.js"
 import { Collidable } from "./collisions.js"
-import { Vector, rgba, roundToNearest } from "../../Utils/math.js"
-import { NArray } from "../../Utils/arrays.js"
+import { Vector, rgba } from "../../Utils/math.js"
 
 export class SpatialHashGrid {
   cellsChecked
@@ -10,14 +9,12 @@ export class SpatialHashGrid {
   dimensions: Vector
   cellSize: number
   queryIds: number
-  drawer: Draw
-  constructor(cellSize: number, dimensions: Vector, draw: Draw) {
+  constructor(cellSize: number, dimensions: Vector) {
     this.grid = new Map()
     this.dimensions = dimensions
     this.cellSize = cellSize
     this.queryIds = 0
     this.cellsChecked = 0
-    this.drawer = draw
   }
   key = (x: number, y: number): string => x + "," + y
   getIndex = (x: number, y: number): Vector =>
@@ -59,7 +56,7 @@ export class SpatialHashGrid {
     if (displayGridCheck) {
       ctx.save()
       ctx.scale(this.cellSize, this.cellSize)
-      this.drawer.rect(i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1, rgba(100, 30))
+      draw.rect(i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1, rgba(100, 30))
       ctx.restore()
     }
     let clients = []
@@ -110,7 +107,7 @@ export class SpatialHashGrid {
   draw() {
     ctx.save()
     ctx.resetTransform()
-    this.drawer.ctx.translate(
+    draw.ctx.translate(
       this.dimensions.x / 2 - (cam.position.x % this.cellSize),
       this.dimensions.y / 2 - (cam.position.y % this.cellSize)
     )
@@ -119,13 +116,13 @@ export class SpatialHashGrid {
       x <= this.dimensions.x / 2;
       x += this.cellSize
     )
-      this.drawer.line(x, this.dimensions.y, x, -this.dimensions.y, 2, rgba(204))
+      draw.line(x, this.dimensions.y, x, -this.dimensions.y, 2, rgba(204))
     for (
       let y = Math.ceil(-this.dimensions.y / this.cellSize) * this.cellSize;
       y <= this.dimensions.y / 2;
       y += this.cellSize
     )
-      this.drawer.line(this.dimensions.x, y, -this.dimensions.x, y, 2, rgba(204))
+      draw.line(this.dimensions.x, y, -this.dimensions.x, y, 2, rgba(204))
     ctx.restore()
   }
 }

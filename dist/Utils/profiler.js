@@ -1,4 +1,4 @@
-import { draw, ctx } from "../Data/world.js";
+import { draw, ctx } from "../Globals/init.js";
 import { rgba } from "./math.js";
 export const displayPeriod = 60;
 export class PerformanceProfile {

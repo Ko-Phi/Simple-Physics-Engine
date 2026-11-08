@@ -1,5 +1,5 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js"
-import { keys, mouse } from "./Data/world.js"
+import { keys, mouse } from "./Globals/input.js"
 import { Color } from "./Data/color.js"
 
 import {
@@ -7,18 +7,20 @@ import {
   canvas,
   draw,
   ctx,
-  outline,
   width,
   height,
   halfHeight,
   halfWidth,
-  period,
-} from "./Data/world.js"
-import * as Settings from "./Data/world.js"
+  outline,
+  focus,
+  setFocus,
+} from "./Globals/init.js"
+
+import * as Settings from "./Globals/settings.js"
 
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js"
 
-const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw)
+const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height))
 
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js"
 
@@ -111,7 +113,7 @@ function drawLoop(timestamp: number) {
   ctx.resetTransform()
 
   //let dt = timestamp - lastTime
-  let dt = period
+  let dt = Settings.period
   lastTime = timestamp
   if (isNaN(dt)) dt = 0
 
@@ -142,7 +144,7 @@ function drawLoop(timestamp: number) {
 
   if (ticksSinceInput > 30) {
     if (keys[" "]) {
-      Settings.setFocus(Settings.focus + 1)
+      setFocus(focus + 1)
       ticksSinceInput = 0
     } else if (mouse.isDown) {
       const [closest, _] = boxes.reduce(
@@ -152,7 +154,7 @@ function drawLoop(timestamp: number) {
         },
         [boxes[0], Infinity] as [Shapeoid, number]
       )
-      Settings.setFocus(closest.id)
+      setFocus(closest.id)
       ticksSinceInput = 0
     }
   } else ticksSinceInput++
