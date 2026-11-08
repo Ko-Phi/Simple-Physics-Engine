@@ -35,7 +35,6 @@ const collisionSet = new Set();
 let KE = 0;
 let lastTime = 0;
 function drawLoop(timestamp) {
-    cam.update();
     if (ctx === null)
         throw "e";
     ctx.resetTransform();
@@ -64,6 +63,7 @@ function drawLoop(timestamp) {
         world.update(box);
         Perf.updateMetric("gridUpdate");
     }
+    cam.update();
     // check collisions
     let collisionChecks = 0;
     for (const box of boxes) {

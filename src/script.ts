@@ -105,7 +105,6 @@ let KE = 0
 
 let lastTime = 0
 function drawLoop(timestamp: number) {
-  cam.update()
   if (ctx === null) throw "e"
   ctx.resetTransform()
   let dt = timestamp - lastTime
@@ -137,6 +136,8 @@ function drawLoop(timestamp: number) {
     world.update(box)
     Perf.updateMetric("gridUpdate")
   }
+
+  cam.update()
 
   // check collisions
   let collisionChecks = 0
