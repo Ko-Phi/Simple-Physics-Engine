@@ -30,16 +30,11 @@ export class Aabb {
     this.centroid = centroid
   }
   draw(position: Vector) {
-    ctx.setTransform(
-      1,
-      0,
-      0,
-      1,
-      this.centroid.x + position.x + halfWidth - cam.position.x,
-      this.centroid.y + position.y + halfHeight - cam.position.y
-    )
+    ctx.save()
+    ctx.translate(this.centroid.x + position.x, this.centroid.y + position.y)
     draw.rect(-this.width / 2, -this.height / 2, this.width, this.height, rgba(128, 50))
     draw.ellipse(0, 0, this.width, this.width, rgba(128, 50), 0, rgba(0, 0))
+    ctx.restore()
   }
 }
 

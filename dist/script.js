@@ -52,6 +52,7 @@ function drawLoop(timestamp) {
     ticksSinceInput++;
     //background(255)
     draw.rect(0, 0, width, height, "#ffffff");
+    ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y);
     world.draw();
     Perf.getTime();
     for (const box of boxes) {
@@ -109,23 +110,12 @@ function drawLoop(timestamp) {
     }
     // draw them boxes
     for (const box of boxes) {
-        ctx.setTransform(1, 0, 0, 1, halfWidth - cam.position.x, halfHeight - cam.position.y);
         if (Settings.drawAsCircles) {
             const diameter = box.hitbox.aabb.width;
             draw.ellipse(box.position.x + box.hitbox.centroid.x, box.position.y + box.hitbox.centroid.y, diameter, diameter, box.shape.color.cachedValue, 1, outline);
         }
         else
             box.draw();
-        //ctx.setTransform(1, 0, 0, 1, halfWidth - cam.position.x, halfHeight - cam.position.y)
-        //draw.ellipse(
-        //  box.position.x + box.hitbox.centroid.x,
-        //  box.position.y + box.hitbox.centroid.y,
-        //  5,
-        //  5,
-        //  rgba(211, 175, 55),
-        //  1,
-        //  outline
-        //)
     }
     Perf.updateMetric("drawBoxes");
     // handle collisions
@@ -136,6 +126,7 @@ function drawLoop(timestamp) {
     }
     Perf.updateMetric("handleCollisions");
     Perf.getTotal();
+    ctx.resetTransform();
     const totalCells = (halfWidth * 2 * (halfHeight * 2)) / Settings.gridSize ** 2;
     const countMetrics = {
         "Cells Filled": world.grid.size + " / " + totalCells,

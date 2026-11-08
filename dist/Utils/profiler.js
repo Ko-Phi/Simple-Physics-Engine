@@ -73,6 +73,8 @@ export class PerformanceProfile {
         total.buffer[0] = sum;
     }
     draw(dataToDisplay, dt) {
+        ctx.save();
+        ctx.resetTransform();
         const margin = 4;
         const padding = 8;
         const dataWidth = 140;
@@ -84,7 +86,6 @@ export class PerformanceProfile {
         const rowGap = 0;
         const start = margin + padding;
         const metricDisplayWidth = padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding;
-        ctx.resetTransform();
         const metricCount = Object.keys(this.metrics).length;
         draw.rect(margin, margin, metricDisplayWidth, padding + (metricCount + 1) * rowHeight + metricCount * rowGap + initialRowGap + padding, rgba(0, 120));
         let dx, dy;
@@ -131,5 +132,6 @@ export class PerformanceProfile {
             dy += rowHeight + rowGap;
             i++;
         }
+        ctx.restore();
     }
 }

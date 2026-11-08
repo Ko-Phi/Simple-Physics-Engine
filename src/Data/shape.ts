@@ -61,11 +61,12 @@ export class Polygon implements AShape {
     this.windingOrder = this.area < 0 ? "CW" : "CCW"
     this.area = Math.abs(this.area) / 2
   }
-  draw(dx: number, dy: number, θ: number) {
-    ctx.setTransform(1, 0, 0, 1, dx, dy)
-    ctx.transform(Math.cos(θ), Math.sin(θ), -Math.sin(θ), Math.cos(θ), 0, 0)
+  draw(dx: number, dy: number, dir: number) {
+    ctx.save()
+    ctx.translate(dx, dy)
+    ctx.rotate(dir)
     drawer.polygon(this.vertices, this.color.cachedValue, 1, outline)
-    ctx.resetTransform()
+    ctx.restore()
   }
 }
 
@@ -87,25 +88,11 @@ export class Circle implements AShape {
     this.area = Math.PI * sq(this.radius)
   }
   draw(dx: number, dy: number, θ: number) {
-    ctx.setTransform(1, 0, 0, 1, dx, dy)
-    drawer.ellipse(
-      this.centroid.x,
-      this.centroid.y,
-      this.radius * 2,
-      this.radius * 2,
-      this.color.cachedValue,
-      2,
-      outline
-    )
-    drawer.line(
-      this.centroid.x,
-      this.centroid.y,
-      this.radius * Math.cos(θ),
-      this.radius * Math.sin(θ),
-      0.5,
-      outline
-    )
-    ctx.resetTransform()
+    ctx.save()
+    ctx.translate(dx + this.centroid.x, dy + this.centroid.y)
+    drawer.ellipse(0, 0, this.radius * 2, this.radius * 2, this.color.cachedValue, 2, outline)
+    drawer.line(0, 0, this.radius * Math.cos(θ), this.radius * Math.sin(θ), 0.5, outline)
+    ctx.restore()
   }
 }
 

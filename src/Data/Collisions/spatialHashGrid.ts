@@ -1,4 +1,4 @@
-import { cam, displayGridCheck } from "../../Data/world.js"
+import { cam, ctx, displayGridCheck } from "../../Data/world.js"
 import { Draw } from "../../Utils/drawing.js"
 import { Collidable } from "./collisions.js"
 import { Vector, rgba, roundToNearest } from "../../Utils/math.js"
@@ -57,21 +57,10 @@ export class SpatialHashGrid {
 
     // iterate over spanned area for clients
     if (displayGridCheck) {
-      this.drawer.ctx.setTransform(
-        1,
-        0,
-        0,
-        1,
-        this.dimensions.x / 2 - cam.position.x,
-        this.dimensions.y / 2 - cam.position.y
-      )
-      this.drawer.rect(
-        ...([i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1].map((n) => n * this.cellSize) as NArray<
-          number,
-          4
-        >),
-        rgba(100, 30)
-      )
+      ctx.save()
+      ctx.scale(this.cellSize, this.cellSize)
+      this.drawer.rect(i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1, rgba(100, 30))
+      ctx.restore()
     }
     let clients = []
     const queryId = this.queryIds++
@@ -119,11 +108,9 @@ export class SpatialHashGrid {
     }
   }
   draw() {
-    this.drawer.ctx.setTransform(
-      1,
-      0,
-      0,
-      1,
+    ctx.save()
+    ctx.resetTransform()
+    this.drawer.ctx.translate(
       this.dimensions.x / 2 - (cam.position.x % this.cellSize),
       this.dimensions.y / 2 - (cam.position.y % this.cellSize)
     )
@@ -139,5 +126,6 @@ export class SpatialHashGrid {
       y += this.cellSize
     )
       this.drawer.line(this.dimensions.x, y, -this.dimensions.x, y, 2, rgba(204))
+    ctx.restore()
   }
 }

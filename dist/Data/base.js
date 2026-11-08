@@ -99,11 +99,12 @@ export class Shapeoid extends Collidable {
             this.shape.color = new Color([150, 200, 150]);
     }
     draw() {
-        const [dx, dy] = [halfWidth - cam.position.x, halfHeight - cam.position.y];
-        this.shape.draw(this.position.x + dx, this.position.y + dy, this.dir);
-        draw.ellipse(this.position.x + this.hitbox.centroid.x + dx, this.position.y + this.hitbox.centroid.y + dy, 5, 5, rgba(211, 175, 55), 1, outline);
-        //ctx.setTransform(1, 0, 0, 1, halfWidth + this.position.x, halfHeight + this.position.y)
-        //draw.line(0, 0, this.velocity.x * 10, this.velocity.y * 10, 2, rgba(100))
+        ctx.save();
+        ctx.translate(this.position.x, this.position.y);
+        this.shape.draw(0, 0, this.dir);
+        ctx.translate(this.hitbox.centroid.x, this.hitbox.centroid.y);
+        draw.ellipse(0, 0, 5, 5, rgba(211, 175, 55), 1, outline);
+        ctx.restore();
     }
     handleCollision(data) {
         const { axis, refA, refB } = data;
@@ -114,8 +115,10 @@ export class Shapeoid extends Collidable {
         refA.position = refA.position.subtract(displacementA);
         refB.position = refB.position.add(displacementB);
         for (const contact of data.contacts) {
-            ctx.setTransform(1, 0, 0, 1, halfWidth + contact.x - cam.position.x, halfHeight + contact.y - cam.position.y);
+            ctx.save();
+            ctx.translate(contact.x, contact.y);
             draw.ellipse(0, 0, 25, 25, rgba(100, 50));
+            ctx.restore();
         }
         if (!Settings.collisionImpulse)
             return;

@@ -58,8 +58,8 @@ export const scaleVariance = 0
 // Visuals
 // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
 export const drawAsCircles = false // shapes drawn as circles. Increases performance
-export const displayAABB = false // aabbs drawn. Uses rect() so not very good for performance
-export const displayGridCheck = false // checked grids are highlighted. Very performance intensive
+export const displayAABB = true // aabbs drawn. Uses rect() so not very good for performance
+export const displayGridCheck = true // checked grids are highlighted. Very performance intensive
 export const cameraTrack = true // track them shapes
 
 class Camera<Type extends { position: Vector }> {
@@ -73,7 +73,6 @@ class Camera<Type extends { position: Vector }> {
   }
   update() {
     this.position = this.position.add(this.target.position.subtract(this.position).scale(0.4))
-    console.log(this.target.position.subtract(this.position).getMag())
     //this.position = this.position.add(
     //  new Vector(
     //    noise(millis() * 0.02, 1) * (Math.random() < 0.5 ? -1 : 1),

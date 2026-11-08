@@ -84,6 +84,8 @@ export class PerformanceProfile {
     total.buffer[0] = sum
   }
   draw(dataToDisplay: Array<Exclude<keyof Metric, "buffer">>, dt: number) {
+    ctx.save()
+    ctx.resetTransform()
     const margin = 4
     const padding = 8
 
@@ -99,7 +101,6 @@ export class PerformanceProfile {
 
     const metricDisplayWidth =
       padding + keyWidth + dataToDisplay.length * (dataWidth + columnGap) + padding
-    ctx.resetTransform()
     const metricCount = Object.keys(this.metrics).length
     draw.rect(
       margin,
@@ -166,5 +167,6 @@ export class PerformanceProfile {
       dy += rowHeight + rowGap
       i++
     }
+    ctx.restore()
   }
 }
