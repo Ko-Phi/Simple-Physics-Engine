@@ -11,6 +11,7 @@ import {
   height,
   halfHeight,
   halfWidth,
+  period,
 } from "./Data/world.js"
 import * as Settings from "./Data/world.js"
 
@@ -107,7 +108,8 @@ let lastTime = 0
 function drawLoop(timestamp: number) {
   if (ctx === null) throw "e"
   ctx.resetTransform()
-  let dt = timestamp - lastTime
+  //let dt = timestamp - lastTime
+  let dt = period
   lastTime = timestamp
   if (isNaN(dt)) dt = 0
 

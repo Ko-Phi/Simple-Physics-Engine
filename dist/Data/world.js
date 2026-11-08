@@ -35,7 +35,7 @@ export const periodicVelocityShifts = false; // velocity randomized periodically
 export const velocityMagnitude = 1; // alters the magnitude of said velocity
 export const collisionImpulse = true; // objects bounce off each other on collision
 export const restitution = 1; // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
-export const mu = 0.005; // add friction (should be quite small)
+export const mu = 0; // add friction (should be quite small)
 export const boundedWorld = false; // whether the world teleports you at the edges or not
 export const allCircles = false; // all shapes are circles. Increases performance as well
 export const allPolys = false; // all shapes are polygons. Slightly more performance intensive
@@ -53,15 +53,15 @@ export const cameraTrack = true; // track them shapes
 class Camera {
     position;
     target;
-    smoothing = 1;
+    smoothing = 0.4;
     trauma = 0;
     constructor(target, position = target.position) {
         this.target = target;
         this.position = position;
     }
     update() {
-        this.position = this.position.add(this.target.position.subtract(this.position).scale(this.smoothing));
-        this.position = this.target.position;
+        this.position = this.position.add(this.target.position.subtract(this.position).scale(0.4));
+        console.log(this.target.position.subtract(this.position).getMag());
         //this.position = this.position.add(
         //  new Vector(
         //    noise(millis() * 0.02, 1) * (Math.random() < 0.5 ? -1 : 1),

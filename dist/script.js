@@ -1,6 +1,6 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { Color } from "./Data/color.js";
-import { cam, canvas, draw, ctx, outline, width, height, halfHeight, halfWidth, } from "./Data/world.js";
+import { cam, canvas, draw, ctx, outline, width, height, halfHeight, halfWidth, period, } from "./Data/world.js";
 import * as Settings from "./Data/world.js";
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height), draw);
@@ -38,7 +38,8 @@ function drawLoop(timestamp) {
     if (ctx === null)
         throw "e";
     ctx.resetTransform();
-    let dt = timestamp - lastTime;
+    //let dt = timestamp - lastTime
+    let dt = period;
     lastTime = timestamp;
     if (isNaN(dt))
         dt = 0;
