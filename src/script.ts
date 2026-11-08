@@ -1,4 +1,5 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js"
+import { keys, mouse } from "./Data/world.js"
 import { Color } from "./Data/color.js"
 
 import {
@@ -121,8 +122,6 @@ function drawLoop(timestamp: number) {
   collisionSet.clear()
   collisions = []
   world.cellsChecked = 0
-  ticksSinceInput++
-  //background(255)
   draw.rect(0, 0, width, height, "#ffffff")
 
   ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y)
@@ -140,6 +139,23 @@ function drawLoop(timestamp: number) {
     world.update(box)
     Perf.updateMetric("gridUpdate")
   }
+
+  if (ticksSinceInput > 30) {
+    if (keys[" "]) {
+      Settings.setFocus(Settings.focus + 1)
+      ticksSinceInput = 0
+    } else if (mouse.isDown) {
+      const [closest, _] = boxes.reduce(
+        ([minBox, min], box): [Shapeoid, number] => {
+          const distance = mouse.position.add(cam.position).subtract(box.position).getMag()
+          return distance < min ? [box, distance] : [minBox, min]
+        },
+        [boxes[0], Infinity] as [Shapeoid, number]
+      )
+      Settings.setFocus(closest.id)
+      ticksSinceInput = 0
+    }
+  } else ticksSinceInput++
 
   cam.update()
 

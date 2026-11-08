@@ -16,7 +16,8 @@ export const newid = () => idCount++
 interface Keys {
   [indexParameterName: string]: boolean
 }
-export const focus = 0
+export let focus = 0
+export const setFocus = (n: number) => (focus = n)
 export const keys: Keys = {
   ArrowUp: false,
 }
@@ -34,6 +35,27 @@ window.addEventListener("keyup", (event) => {
   if (event.key in keys) {
     keys[event.key] = false
   }
+})
+
+export const mouse = { position: new Vector(0, 0), isDown: false }
+function getMousePos(canvas: HTMLCanvasElement, event: MouseEvent) {
+  const rect = canvas.getBoundingClientRect()
+  return new Vector(
+    ((event.clientX - rect.left) * canvas.width) / rect.width - halfWidth,
+    ((event.clientY - rect.top) * canvas.height) / rect.height - halfHeight
+  )
+}
+canvas.addEventListener("mousemove", (event) => {
+  const pos = getMousePos(canvas, event)
+  mouse.position = pos
+})
+canvas.addEventListener("mousedown", (event) => {
+  mouse.isDown = true
+  const pos = getMousePos(canvas, event)
+  console.log(`Clicked at X: ${pos.x}, Y: ${pos.y}`)
+})
+canvas.addEventListener("mouseup", () => {
+  mouse.isDown = false
 })
 
 export const period = 16.67

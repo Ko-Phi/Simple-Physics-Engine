@@ -84,7 +84,7 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     const input_dir = +keys.e - +keys.q
     const translation = new Vector(input_x, input_y).normalize()
     this.velocity = this.velocity.add(translation.divide(5))
-    this.omega += input_dir / 1000
+    this.omega += input_dir / 100
   }
   update(dt: number) {
     this.ticks++
