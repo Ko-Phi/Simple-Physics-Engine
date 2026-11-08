@@ -100,11 +100,13 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
       this.omega -= Math.sign(this.omega) * torque
     } else this.omega = 0
 
-    if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2) {
-      this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2)
-    }
-    if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2) {
-      this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2)
+    if (Settings.boundedWorld) {
+      if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2) {
+        this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2)
+      }
+      if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2) {
+        this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2)
+      }
     }
 
     if (this.ticks % (60 * dt) === 0 && Settings.periodicVelocityShifts) {

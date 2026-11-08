@@ -99,10 +99,10 @@ export class SpatialHashGrid {
         }
     }
     draw() {
-        this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2 - cam.position.x, this.dimensions.y / 2 - cam.position.y);
+        this.drawer.ctx.setTransform(1, 0, 0, 1, this.dimensions.x / 2 - (cam.position.x % this.cellSize), this.dimensions.y / 2 - (cam.position.y % this.cellSize));
         for (let x = Math.ceil(-this.dimensions.x / this.cellSize) * this.cellSize; x <= this.dimensions.x / 2; x += this.cellSize)
-            this.drawer.line(x, this.dimensions.y, x, -this.dimensions.y, 1, rgba(204));
+            this.drawer.line(x, this.dimensions.y, x, -this.dimensions.y, 2, rgba(204));
         for (let y = Math.ceil(-this.dimensions.y / this.cellSize) * this.cellSize; y <= this.dimensions.y / 2; y += this.cellSize)
-            this.drawer.line(this.dimensions.x, y, -this.dimensions.x, y, 1, rgba(204));
+            this.drawer.line(this.dimensions.x, y, -this.dimensions.x, y, 2, rgba(204));
     }
 }
