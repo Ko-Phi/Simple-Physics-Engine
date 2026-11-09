@@ -43,16 +43,7 @@ export class PolygonHitbox extends Polygon {
         this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid);
         this.shallowUpdate(position, dir);
     }
-    shallowUpdate(position, dir) {
-        this.lastUpdate = "AABB";
-        // check if rotation recalc neccessary
-        if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0)
-            this.centroid.rotate(dir);
-        if (!Settings.displayAABB)
-            return;
-        // display AABB (note aabb centroid points to base centroid)
-        this.aabb.draw(position);
-    }
+    shallowUpdate = (position, dir) => shallowUpdate(this, position, dir);
     narrowUpdate(position, dir) {
         if (this.lastUpdate !== "AABB")
             return;
@@ -105,15 +96,7 @@ export class CircleHitbox extends Circle {
         this.cachedCentroid = this.centroid.copy();
         this.shallowUpdate(position, dir);
     }
-    shallowUpdate(position, dir) {
-        this.lastUpdate = "AABB";
-        if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0)
-            this.centroid.rotate(dir);
-        if (!Settings.displayAABB)
-            return;
-        // display AABB (note aabb centroid points to base centroid)
-        this.aabb.draw(position);
-    }
+    shallowUpdate = (position, dir) => shallowUpdate(this, position, dir);
     narrowUpdate = () => undefined;
     project(axis, position) {
         const centroid = this.centroid.add(position);
@@ -226,6 +209,19 @@ export class Collidable {
         }
         return { ...min, contacts: contactPoints };
     }
+}
+function shallowUpdate(hitbox, position, dir) {
+    hitbox.lastUpdate = "AABB";
+    // check if rotation recalc neccessary
+    if (dir !== hitbox.cachedDir && hitbox.cachedCentroid.getSqMag() !== 0) {
+        hitbox.centroid = hitbox.cachedCentroid.rotate(dir);
+        hitbox.aabb.centroid = hitbox.centroid;
+        hitbox.cachedDir = dir;
+    }
+    if (!Settings.displayAABB)
+        return;
+    // display AABB (note aabb centroid points to base centroid)
+    hitbox.aabb.draw(position);
 }
 function projectCheck(axis, refA, refB) {
     // project each hitbox's vertices

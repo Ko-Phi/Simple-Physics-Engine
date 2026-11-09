@@ -73,14 +73,7 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     this.aabb = new Aabb(this.radius * 2, this.radius * 2, this.centroid)
     this.shallowUpdate(position, dir)
   }
-  shallowUpdate(position: Vector, dir: number) {
-    this.lastUpdate = "AABB"
-    // check if rotation recalc neccessary
-    if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0) this.centroid.rotate(dir)
-    if (!Settings.displayAABB) return
-    // display AABB (note aabb centroid points to base centroid)
-    this.aabb.draw(position)
-  }
+  shallowUpdate = (position: Vector, dir: number) => shallowUpdate(this, position, dir)
   narrowUpdate(position: Vector, dir: number) {
     if (this.lastUpdate !== "AABB") return
     this.lastUpdate = "SAT"
@@ -134,13 +127,7 @@ export class CircleHitbox extends Circle implements AHitbox {
     this.cachedCentroid = this.centroid.copy()
     this.shallowUpdate(position, dir)
   }
-  shallowUpdate(position: Vector, dir: number) {
-    this.lastUpdate = "AABB"
-    if (dir !== this.cachedDir && this.cachedCentroid.getSqMag() !== 0) this.centroid.rotate(dir)
-    if (!Settings.displayAABB) return
-    // display AABB (note aabb centroid points to base centroid)
-    this.aabb.draw(position)
-  }
+  shallowUpdate = (position: Vector, dir: number) => shallowUpdate(this, position, dir)
   narrowUpdate = () => undefined
   project(axis: Vector, position: Vector): { min: number; max: number } {
     const centroid = this.centroid.add(position)
@@ -257,7 +244,18 @@ export class Collidable {
     return { ...min, contacts: contactPoints }
   }
 }
-
+function shallowUpdate(hitbox: Hitbox, position: Vector, dir: number) {
+  hitbox.lastUpdate = "AABB"
+  // check if rotation recalc neccessary
+  if (dir !== hitbox.cachedDir && hitbox.cachedCentroid.getSqMag() !== 0) {
+    hitbox.centroid = hitbox.cachedCentroid.rotate(dir)
+    hitbox.aabb.centroid = hitbox.centroid
+    hitbox.cachedDir = dir
+  }
+  if (!Settings.displayAABB) return
+  // display AABB (note aabb centroid points to base centroid)
+  hitbox.aabb.draw(position)
+}
 function projectCheck<A extends Collidable, B extends Collidable>(
   axis: Vector,
   refA: A,
