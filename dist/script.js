@@ -1,7 +1,7 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { keys, mouse } from "./Globals/input.js";
 import { Color } from "./Data/color.js";
-import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, outline, focus, setFocus, } from "./Globals/init.js";
+import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, focus, setFocus, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
@@ -124,14 +124,8 @@ function drawLoop(timestamp) {
         Perf.updateMetric("satCheck");
     }
     // draw them boxes
-    for (const box of boxes) {
-        if (Settings.drawAsCircles) {
-            const diameter = box.hitbox.aabb.width;
-            draw.ellipse(box.position.x + box.hitbox.centroid.x, box.position.y + box.hitbox.centroid.y, diameter, diameter, box.shape.color.cachedValue, 1, outline);
-        }
-        else
-            box.draw();
-    }
+    for (const box of boxes)
+        box.draw();
     Perf.updateMetric("drawBoxes");
     // handle collisions
     for (const collision of collisions) {

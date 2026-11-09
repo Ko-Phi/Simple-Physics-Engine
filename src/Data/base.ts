@@ -5,6 +5,7 @@ import { Vector, random, sq, rgba } from "../Utils/math.js"
 import { zipShift } from "../Utils/arrays.js"
 import { Shape, Polygon } from "./shape.js"
 import { Color } from "./color.js"
+import { Sprite } from "./sprite.js"
 import {
   Collidable,
   CircleHitbox,
@@ -24,7 +25,7 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
 
   velocity: Vector
   omega: number
-  shape: Shape
+  sprite: Sprite
   trueColor: Color
 
   ticks: number
@@ -36,11 +37,11 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     super(hitbox, position, dir)
     this.id = newid()
     this.indices = []
-    this.shape = shape
+    this.sprite = new Sprite([shape])
     this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV")
 
     this.rho = rho
-    this.mass = this.shape.area * this.rho
+    this.mass = this.hitbox.area * this.rho
     if (this.hitbox.type === "Circle") {
       this.inertia = 0.5 * this.mass * sq(this.hitbox.radius)
     } else if (isPolygonHitbox(this.hitbox)) {
@@ -95,7 +96,7 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     if (velocity > Settings.mu)
       this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity))
     else this.velocity = new Vector(0, 0)
-    const torque = (Settings.mu * this.shape.radius * this.mass) / this.inertia
+    const torque = (Settings.mu * this.hitbox.radius * this.mass) / this.inertia
     if (Math.abs(this.omega) > torque) {
       this.omega -= Math.sign(this.omega) * torque
     } else this.omega = 0
@@ -117,13 +118,13 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
       )
       this.omega = random(-0.01, 0.01) * Settings.scale
     }
-    if (focus !== this.id) this.shape.color = this.trueColor
-    else this.shape.color = new Color([150, 200, 150])
+    if (focus !== this.id) this.sprite.shapes[0].color = this.trueColor
+    else this.sprite.shapes[0].color = new Color([150, 200, 150])
   }
   draw() {
     ctx.save()
     ctx.translate(this.position.x, this.position.y)
-    this.shape.draw(0, 0, this.dir)
+    this.sprite.draw(0, 0, this.dir)
     ctx.translate(this.hitbox.centroid.x, this.hitbox.centroid.y)
     draw.ellipse(0, 0, 5, 5, rgba(211, 175, 55), 1, outline)
     ctx.restore()

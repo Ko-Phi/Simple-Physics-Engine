@@ -5,6 +5,7 @@ import { Vector, random, sq, rgba } from "../Utils/math.js";
 import { zipShift } from "../Utils/arrays.js";
 import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
+import { Sprite } from "./sprite.js";
 import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./Collisions/collisions.js";
 export class Shapeoid extends Collidable {
     id;
@@ -14,7 +15,7 @@ export class Shapeoid extends Collidable {
     inertia;
     velocity;
     omega;
-    shape;
+    sprite;
     trueColor;
     ticks;
     constructor(position, dir, shape, velocity, rho = 1) {
@@ -24,10 +25,10 @@ export class Shapeoid extends Collidable {
         super(hitbox, position, dir);
         this.id = newid();
         this.indices = [];
-        this.shape = shape;
+        this.sprite = new Sprite([shape]);
         this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV");
         this.rho = rho;
-        this.mass = this.shape.area * this.rho;
+        this.mass = this.hitbox.area * this.rho;
         if (this.hitbox.type === "Circle") {
             this.inertia = 0.5 * this.mass * sq(this.hitbox.radius);
         }
@@ -75,7 +76,7 @@ export class Shapeoid extends Collidable {
             this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity));
         else
             this.velocity = new Vector(0, 0);
-        const torque = (Settings.mu * this.shape.radius * this.mass) / this.inertia;
+        const torque = (Settings.mu * this.hitbox.radius * this.mass) / this.inertia;
         if (Math.abs(this.omega) > torque) {
             this.omega -= Math.sign(this.omega) * torque;
         }
@@ -94,14 +95,14 @@ export class Shapeoid extends Collidable {
             this.omega = random(-0.01, 0.01) * Settings.scale;
         }
         if (focus !== this.id)
-            this.shape.color = this.trueColor;
+            this.sprite.shapes[0].color = this.trueColor;
         else
-            this.shape.color = new Color([150, 200, 150]);
+            this.sprite.shapes[0].color = new Color([150, 200, 150]);
     }
     draw() {
         ctx.save();
         ctx.translate(this.position.x, this.position.y);
-        this.shape.draw(0, 0, this.dir);
+        this.sprite.draw(0, 0, this.dir);
         ctx.translate(this.hitbox.centroid.x, this.hitbox.centroid.y);
         draw.ellipse(0, 0, 5, 5, rgba(211, 175, 55), 1, outline);
         ctx.restore();

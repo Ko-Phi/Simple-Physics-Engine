@@ -208,20 +208,7 @@ function drawLoop(timestamp: number) {
   }
 
   // draw them boxes
-  for (const box of boxes) {
-    if (Settings.drawAsCircles) {
-      const diameter = box.hitbox.aabb.width
-      draw.ellipse(
-        box.position.x + box.hitbox.centroid.x,
-        box.position.y + box.hitbox.centroid.y,
-        diameter,
-        diameter,
-        box.shape.color.cachedValue,
-        1,
-        outline
-      )
-    } else box.draw()
-  }
+  for (const box of boxes) box.draw()
   Perf.updateMetric("drawBoxes")
 
   // handle collisions

@@ -15,7 +15,6 @@ export const scale = 20;
 export const scaleVariance = 0;
 // Visuals
 // 16.67 ms is the sweet spot. If your device can average below this, you can swap to 60 fps
-export const drawAsCircles = false; // shapes drawn as circles. Increases performance
 export const displayAABB = true; // aabbs drawn. Uses rect() so not very good for performance
 export const displayGridCheck = true; // checked grids are highlighted. Very performance intensive
 export const cameraTrack = true; // track them shapes
