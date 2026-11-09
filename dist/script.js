@@ -1,7 +1,7 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { keys, mouse } from "./Globals/input.js";
 import { Color } from "./Data/color.js";
-import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, focus, setFocus, } from "./Globals/init.js";
+import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, setFocus, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
@@ -66,7 +66,8 @@ function drawLoop(timestamp) {
     }
     if (ticksSinceInput > 30) {
         if (keys[" "]) {
-            setFocus(focus + 1);
+            setFocus(NaN);
+            cam.target = { position: new Vector(0, 0) };
             ticksSinceInput = 0;
         }
         else if (mouse.isDown) {

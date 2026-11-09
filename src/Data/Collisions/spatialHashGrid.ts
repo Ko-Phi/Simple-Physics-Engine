@@ -56,7 +56,7 @@ export class SpatialHashGrid {
     if (displayGridCheck) {
       ctx.save()
       ctx.scale(this.cellSize, this.cellSize)
-      draw.rect(i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1, rgba(100, 30))
+      draw.rect(i1.x, i1.y, i2.x - i1.x + 1, i2.y - i1.y + 1, rgba(100, 15))
       ctx.restore()
     }
     let clients = []

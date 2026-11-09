@@ -11,8 +11,6 @@ import {
   height,
   halfHeight,
   halfWidth,
-  outline,
-  focus,
   setFocus,
 } from "./Globals/init.js"
 
@@ -144,7 +142,8 @@ function drawLoop(timestamp: number) {
 
   if (ticksSinceInput > 30) {
     if (keys[" "]) {
-      setFocus(focus + 1)
+      setFocus(NaN)
+      cam.target = { position: new Vector(0, 0) }
       ticksSinceInput = 0
     } else if (mouse.isDown) {
       const [closest, _] = boxes.reduce(

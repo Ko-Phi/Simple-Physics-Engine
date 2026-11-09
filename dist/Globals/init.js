@@ -10,7 +10,7 @@ export const [width, height] = [canvas.width, canvas.height];
 export const [halfWidth, halfHeight] = [width / 2, height / 2];
 let idCount = 0;
 export const newid = () => idCount++;
-export let focus = 0;
+export let focus = NaN;
 export const setFocus = (n) => (focus = n);
 class Camera {
     position;
