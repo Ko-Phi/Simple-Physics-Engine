@@ -26,8 +26,6 @@ const Perf = new PerformanceProfile("boxUpdate", "aabbUpdate", "gridUpdate", "gr
 let ticksSinceInput = 0;
 let ticks = 0;
 let collisions = [];
-// const font = createFont("sans-serif")
-// const fontBold = createFont("sans-serif Bold")
 for (const client of boxes) {
     client.getInput();
     world.newClient(client);
@@ -115,7 +113,7 @@ function drawLoop(timestamp) {
             Perf.updateMetric("satCheck");
             collisionChecks++;
             if (collision)
-                collisions.push({ ...collision, baseA: box, baseB: client });
+                collisions.push({ ...collision, refA: box, refB: client });
         }
     }
     if (ticks === 0) {
@@ -130,9 +128,10 @@ function drawLoop(timestamp) {
     Perf.updateMetric("drawBoxes");
     // handle collisions
     for (const collision of collisions) {
-        if (collision.baseA === undefined)
-            continue;
-        collision.baseA.handleCollision(collision);
+        const propA = collision.refA.handleCollision(collision);
+        const propB = collision.refB.handleCollision(collision);
+        Object.assign(collision.refA, propA);
+        Object.assign(collision.refB, propB);
     }
     Perf.updateMetric("handleCollisions");
     Perf.getTotal();

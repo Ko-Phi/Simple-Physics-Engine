@@ -286,8 +286,8 @@ function circlePolygonCheck<A extends Collidable, B extends Collidable>(
   return projectCheck(axis, refA, refB)
 }
 
-export abstract class CollisionHandler<A extends Collidable, B extends Collidable> {
-  abstract handleCollision: (collision: Collision<A, B>) => void
+export abstract class CollisionHandler<A extends Collidable, B extends Collidable, Ret> {
+  abstract handleCollision: (collision: Collision<A, B>) => Ret
 }
 
 export type Hitbox = PolygonHitbox | CircleHitbox

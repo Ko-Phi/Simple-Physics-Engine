@@ -15,7 +15,11 @@ import {
   isPolygonHitbox,
 } from "./Collisions/collisions.js"
 
-export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, Shapeoid> {
+export class Shapeoid
+  extends Collidable
+  implements
+    CollisionHandler<Shapeoid, Shapeoid, { position: Vector; velocity: Vector; omega: number }>
+{
   id: number
 
   rho: number
@@ -128,41 +132,32 @@ export class Shapeoid extends Collidable implements CollisionHandler<Shapeoid, S
     ctx.restore()
   }
   handleCollision(data: Collision<Shapeoid, Shapeoid>) {
-    const { axis, refA, refB } = data
+    let { axis, refA, refB, contacts, overlap } = data
+    const [other, sign] = this === refA ? [refB, -1] : [refA, 1]
 
-    const MTV = data.axis.scale(data.overlap)
-    const [massA, massB] = [refA.mass, refB.mass]
-    const displacementA = MTV.scale(massB / (massA + massB))
-    const displacementB = MTV.scale(massA / (massA + massB))
-    refA.position = refA.position.subtract(displacementA)
-    refB.position = refB.position.add(displacementB)
+    const displacement = axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)))
+    const position = this.position.add(displacement)
 
-    for (const contact of data.contacts) {
-      ctx.save()
-      ctx.translate(contact.x, contact.y)
-      draw.ellipse(0, 0, 25, 25, rgba(100, 50))
-      ctx.restore()
+    for (const contact of contacts) draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50))
+    let { velocity, omega } = this
+    if (Settings.collisionImpulse) {
+      for (const contact of data.contacts) {
+        const [vAC, vBC] = [refA, refB].map((ref) => contact.subtract(ref.position))
+        const contactVelocityA = refA.velocity.add(vAC.perpendicular().scale(refA.omega))
+        const contactVelocityB = refB.velocity.add(vBC.perpendicular().scale(refB.omega))
+
+        const velocityAB = contactVelocityB.subtract(contactVelocityA)
+        const impulseScalar =
+          velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
+          (axis.dotProduct(axis.scale(1 / refA.mass + 1 / refB.mass)) +
+            sq(vAC.crossProduct(axis)) / refA.inertia +
+            sq(vBC.crossProduct(axis)) / refB.inertia)
+
+        const vTC = this === refA ? vAC : vBC
+        velocity = this.velocity.add(axis.scale((impulseScalar / this.mass) * sign))
+        omega = this.omega - ((vTC.crossProduct(axis) * impulseScalar) / this.inertia) * sign
+      }
     }
-    if (!Settings.collisionImpulse) return
-
-    for (const contact of data.contacts) {
-      const [vAC, vBC] = [refA, refB].map((ref) => contact.subtract(ref.position))
-      const contactVelocityA = refA.velocity.add(vAC.perpendicular().scale(refA.omega))
-      const contactVelocityB = refB.velocity.add(vBC.perpendicular().scale(refB.omega))
-
-      const velocityAB = contactVelocityB.subtract(contactVelocityA)
-
-      const impulseScalar =
-        velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
-        (axis.dotProduct(axis.scale(1 / massA + 1 / massB)) +
-          sq(vAC.crossProduct(axis)) / refA.inertia +
-          sq(vBC.crossProduct(axis)) / refB.inertia)
-
-      refA.velocity = refA.velocity.subtract(axis.scale(impulseScalar / massA))
-      refA.omega += (vAC.crossProduct(axis) * impulseScalar) / refA.inertia
-
-      refB.velocity = refB.velocity.add(axis.scale(impulseScalar / massB))
-      refB.omega -= (vBC.crossProduct(axis) * impulseScalar) / refB.inertia
-    }
+    return { position, velocity, omega }
   }
 }
