@@ -7,6 +7,7 @@ import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
 import { Sprite } from "./sprite.js";
 import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./Collisions/collisions.js";
+import { Immovable } from "./immovable.js";
 export class Shapeoid extends Collidable {
     id;
     rho;
@@ -108,7 +109,9 @@ export class Shapeoid extends Collidable {
     handleCollision(data) {
         let { axis, refA, refB, contacts, overlap } = data;
         const [other, sign] = this === refA ? [refB, -1] : [refA, 1];
-        const displacement = axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)));
+        const displacement = other instanceof Immovable
+            ? axis.scale(sign * overlap)
+            : axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)));
         const position = this.position.add(displacement);
         for (const contact of contacts)
             draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));

@@ -14,6 +14,7 @@ import {
   Collision,
   isPolygonHitbox,
 } from "./Collisions/collisions.js"
+import { Immovable } from "./immovable.js"
 
 export class Shapeoid
   extends Collidable
@@ -131,11 +132,14 @@ export class Shapeoid
     draw.ellipse(0, 0, 5, 5, rgba(211, 175, 55), 1, outline)
     ctx.restore()
   }
-  handleCollision(data: Collision<Shapeoid, Shapeoid>) {
+  handleCollision(data: Collision<Shapeoid | Immovable, Shapeoid | Immovable>) {
     let { axis, refA, refB, contacts, overlap } = data
     const [other, sign] = this === refA ? [refB, -1] : [refA, 1]
 
-    const displacement = axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)))
+    const displacement =
+      other instanceof Immovable
+        ? axis.scale(sign * overlap)
+        : axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)))
     const position = this.position.add(displacement)
 
     for (const contact of contacts) draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50))

@@ -23,9 +23,13 @@ const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height))
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js"
 
 import { Shapeoid } from "./Data/base.js"
+import { Immovable } from "./Data/immovable.js"
 
-let boxes: Shapeoid[] = []
+let boxes: Array<Shapeoid | Immovable> = []
 for (let i = 0; i < Settings.insertCount; i++) {
+  const factory = random(1, 20) > 19 ? Immovable : Shapeoid
+  let color = new Color([160, 160, 160])
+
   let shape =
     (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
       ? new Polygon(
@@ -37,9 +41,9 @@ for (let i = 0; i < Settings.insertCount; i++) {
             ),
             Math.ceil(random(2, 7))
           ),
-          new Color([255, 0, 0])
+          color
         )
-      : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), new Color([255, 0, 0]))
+      : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), color)
   if (random(0, 5) > 4) {
     let hWidth =
       Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * random(2, 4)
@@ -47,17 +51,18 @@ for (let i = 0; i < Settings.insertCount; i++) {
       Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5
     shape = new Polygon(
       polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight),
-      new Color([255, 0, 0])
+      color
     )
   }
   boxes.push(
-    new Shapeoid(
+    new factory(
       new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)),
       random(0, 2 * Math.PI),
       shape
     )
   )
 }
+
 if (Settings.insertCount === 0)
   boxes.push(
     new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)),
@@ -95,7 +100,7 @@ let ticks = 0
 let collisions = []
 
 for (const client of boxes) {
-  client.getInput()
+  if (client instanceof Shapeoid) client.getInput()
   world.newClient(client)
 }
 
@@ -127,9 +132,11 @@ function drawLoop(timestamp: number) {
   Perf.getTime()
 
   for (const box of boxes) {
-    KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2
-    box.update(dt)
-    box.getInput()
+    if (box instanceof Shapeoid) {
+      KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2
+      box.update(dt)
+      box.getInput()
+    }
     Perf.updateMetric("boxUpdate")
     box.hitbox.shallowUpdate(box.position, box.dir)
     Perf.updateMetric("aabbUpdate")
@@ -144,11 +151,11 @@ function drawLoop(timestamp: number) {
       ticksSinceInput = 0
     } else if (mouse.isDown) {
       const [closest, _] = boxes.reduce(
-        ([minBox, min], box): [Shapeoid, number] => {
+        ([minBox, min], box): [Shapeoid | Immovable, number] => {
           const distance = mouse.position.add(cam.position).subtract(box.position).getMag()
           return distance < min ? [box, distance] : [minBox, min]
         },
-        [boxes[0], Infinity] as [Shapeoid, number]
+        [boxes[0], Infinity] as [Shapeoid | Immovable, number]
       )
       setFocus(closest.id)
       ticksSinceInput = 0

@@ -7,17 +7,20 @@ import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
 import { Shapeoid } from "./Data/base.js";
+import { Immovable } from "./Data/immovable.js";
 let boxes = [];
 for (let i = 0; i < Settings.insertCount; i++) {
+    const factory = random(1, 20) > 19 ? Immovable : Shapeoid;
+    let color = new Color([160, 160, 160]);
     let shape = (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
-        ? new Polygon(regularPolyVerts(0, 0, Math.ceil(Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance)), Math.ceil(random(2, 7))), new Color([255, 0, 0]))
-        : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), new Color([255, 0, 0]));
+        ? new Polygon(regularPolyVerts(0, 0, Math.ceil(Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance)), Math.ceil(random(2, 7))), color)
+        : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), color);
     if (random(0, 5) > 4) {
         let hWidth = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * random(2, 4);
         let hHeight = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5;
-        shape = new Polygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), new Color([255, 0, 0]));
+        shape = new Polygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), color);
     }
-    boxes.push(new Shapeoid(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
+    boxes.push(new factory(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
 }
 if (Settings.insertCount === 0)
     boxes.push(new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Shapeoid(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
@@ -27,7 +30,8 @@ let ticksSinceInput = 0;
 let ticks = 0;
 let collisions = [];
 for (const client of boxes) {
-    client.getInput();
+    if (client instanceof Shapeoid)
+        client.getInput();
     world.newClient(client);
 }
 const collisionSet = new Set();
@@ -53,9 +57,11 @@ function drawLoop(timestamp) {
     world.draw();
     Perf.getTime();
     for (const box of boxes) {
-        KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2;
-        box.update(dt);
-        box.getInput();
+        if (box instanceof Shapeoid) {
+            KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2;
+            box.update(dt);
+            box.getInput();
+        }
         Perf.updateMetric("boxUpdate");
         box.hitbox.shallowUpdate(box.position, box.dir);
         Perf.updateMetric("aabbUpdate");
