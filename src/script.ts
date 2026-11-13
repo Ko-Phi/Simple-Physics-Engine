@@ -22,12 +22,11 @@ const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height))
 
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js"
 
-import { Shapeoid } from "./Data/base.js"
-import { Immovable } from "./Data/immovable.js"
+import { RigidBody, Immovable } from "./Data/base.js"
 
-let boxes: Array<Shapeoid | Immovable> = []
+let boxes: Array<RigidBody | Immovable> = []
 for (let i = 0; i < Settings.insertCount; i++) {
-  const factory = random(1, 20) > 19 ? Immovable : Shapeoid
+  const factory = random(1, 20) > 19 ? Immovable : RigidBody
   let color = new Color([160, 160, 160])
 
   let shape =
@@ -65,15 +64,15 @@ for (let i = 0; i < Settings.insertCount; i++) {
 
 if (Settings.insertCount === 0)
   boxes.push(
-    new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)),
-    new Shapeoid(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))),
-    new Shapeoid(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))),
-    new Shapeoid(
+    new RigidBody(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)),
+    new RigidBody(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))),
+    new RigidBody(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))),
+    new RigidBody(
       new Vector(0, 100),
       1.5,
       new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))
     ),
-    new Shapeoid(
+    new RigidBody(
       new Vector(0, 200),
       1.2,
       new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))
@@ -100,7 +99,7 @@ let ticks = 0
 let collisions = []
 
 for (const client of boxes) {
-  if (client instanceof Shapeoid) client.getInput()
+  if (client instanceof RigidBody) client.getInput()
   world.newClient(client)
 }
 
@@ -132,8 +131,8 @@ function drawLoop(timestamp: number) {
   Perf.getTime()
 
   for (const box of boxes) {
-    if (box instanceof Shapeoid) {
-      KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2
+    if (box instanceof RigidBody) {
+      KE += box.getKE()
       box.update(dt)
       box.getInput()
     }
@@ -151,11 +150,11 @@ function drawLoop(timestamp: number) {
       ticksSinceInput = 0
     } else if (mouse.isDown) {
       const [closest, _] = boxes.reduce(
-        ([minBox, min], box): [Shapeoid | Immovable, number] => {
+        ([minBox, min], box): [RigidBody | Immovable, number] => {
           const distance = mouse.position.add(cam.position).subtract(box.position).getMag()
           return distance < min ? [box, distance] : [minBox, min]
         },
-        [boxes[0], Infinity] as [Shapeoid | Immovable, number]
+        [boxes[0], Infinity] as [RigidBody | Immovable, number]
       )
       setFocus(closest.id)
       ticksSinceInput = 0

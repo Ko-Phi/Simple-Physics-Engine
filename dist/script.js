@@ -6,11 +6,10 @@ import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
-import { Shapeoid } from "./Data/base.js";
-import { Immovable } from "./Data/immovable.js";
+import { RigidBody, Immovable } from "./Data/base.js";
 let boxes = [];
 for (let i = 0; i < Settings.insertCount; i++) {
-    const factory = random(1, 20) > 19 ? Immovable : Shapeoid;
+    const factory = random(1, 20) > 19 ? Immovable : RigidBody;
     let color = new Color([160, 160, 160]);
     let shape = (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
         ? new Polygon(regularPolyVerts(0, 0, Math.ceil(Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance)), Math.ceil(random(2, 7))), color)
@@ -23,14 +22,14 @@ for (let i = 0; i < Settings.insertCount; i++) {
     boxes.push(new factory(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
 }
 if (Settings.insertCount === 0)
-    boxes.push(new Shapeoid(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new Shapeoid(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new Shapeoid(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
+    boxes.push(new RigidBody(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new RigidBody(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new RigidBody(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new RigidBody(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new RigidBody(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
 import { PerformanceProfile } from "./Utils/profiler.js";
 const Perf = new PerformanceProfile("boxUpdate", "aabbUpdate", "gridUpdate", "gridQuery", "priorCheck", "hitboxUpdate", "satCheck", "drawBoxes", "handleCollisions");
 let ticksSinceInput = 0;
 let ticks = 0;
 let collisions = [];
 for (const client of boxes) {
-    if (client instanceof Shapeoid)
+    if (client instanceof RigidBody)
         client.getInput();
     world.newClient(client);
 }
@@ -57,8 +56,8 @@ function drawLoop(timestamp) {
     world.draw();
     Perf.getTime();
     for (const box of boxes) {
-        if (box instanceof Shapeoid) {
-            KE += (box.mass * box.velocity.getSqMag()) / 2 + (box.inertia * sq(box.omega)) / 2;
+        if (box instanceof RigidBody) {
+            KE += box.getKE();
             box.update(dt);
             box.getInput();
         }

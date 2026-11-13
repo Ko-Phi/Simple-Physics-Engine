@@ -7,8 +7,7 @@ import { Polygon } from "./shape.js";
 import { Color } from "./color.js";
 import { Sprite } from "./sprite.js";
 import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./Collisions/collisions.js";
-import { Immovable } from "./immovable.js";
-export class Shapeoid extends Collidable {
+export class RigidBody extends Collidable {
     id;
     rho;
     mass;
@@ -32,13 +31,11 @@ export class Shapeoid extends Collidable {
             this.inertia = 0.5 * this.mass * sq(this.hitbox.radius);
         }
         else if (isPolygonHitbox(this.hitbox)) {
-            const loopedVertices = this.hitbox.windingOrder === "CW"
-                ? this.hitbox.vertices.slice().reverse()
-                : this.hitbox.vertices.slice();
+            const loopedVertices = this.hitbox.windingOrder === "CW" ? this.hitbox.vertices.reverse() : this.hitbox.vertices;
             this.inertia =
-                zipShift(loopedVertices).reduce((inertia, [vertex, nextVertex]) => ((subArea) => inertia +
-                    subArea *
-                        (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()))(vertex.crossProduct(nextVertex)), 0) *
+                zipShift(loopedVertices).reduce((acc, [vertex, nextVertex]) => acc +
+                    vertex.crossProduct(nextVertex) *
+                        (vertex.getSqMag() + vertex.dotProduct(nextVertex) + nextVertex.getSqMag()), 0) *
                     (this.rho / 12) -
                     this.mass * this.hitbox.centroid.getSqMag();
         }
@@ -65,6 +62,7 @@ export class Shapeoid extends Collidable {
         const translation = new Vector(input_x, input_y).normalize();
         this.velocity = this.velocity.add(translation.divide(5));
         this.omega += input_dir / 1000;
+        console.log(this.omega);
     }
     update(dt) {
         this.ticks++;
@@ -109,9 +107,8 @@ export class Shapeoid extends Collidable {
     handleCollision(data) {
         let { axis, refA, refB, contacts, overlap } = data;
         const [other, sign] = this === refA ? [refB, -1] : [refA, 1];
-        const displacement = other instanceof Immovable
-            ? axis.scale(sign * overlap)
-            : axis.scale(sign * overlap * (other.mass / (this.mass + other.mass)));
+        const displacementScalar = other instanceof Immovable ? 1 : other.mass / (this.mass + other.mass);
+        const displacement = axis.scale(sign * overlap * displacementScalar);
         const position = this.position.add(displacement);
         for (const contact of contacts)
             draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));
@@ -133,4 +130,21 @@ export class Shapeoid extends Collidable {
         }
         return { position, velocity, omega };
     }
+    getKE = () => (this.mass * this.velocity.getSqMag()) / 2 + (this.inertia * sq(this.omega)) / 2;
+}
+export class Immovable extends RigidBody {
+    mass = Infinity;
+    inertia = Infinity;
+    velocity = new Vector(0, 0);
+    omega = 0;
+    constructor(position, dir, shape) {
+        super(position, dir, shape);
+        this.trueColor = new Color([160, 160, 160]);
+    }
+    handleCollision(data) {
+        for (const contact of data.contacts)
+            draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));
+        return { position: this.position, velocity: this.velocity, omega: this.omega };
+    }
+    getKE = () => 0;
 }
