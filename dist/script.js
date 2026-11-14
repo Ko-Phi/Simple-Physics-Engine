@@ -3,10 +3,10 @@ import { keys, mouse } from "./Globals/input.js";
 import { Color } from "./Data/color.js";
 import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, setFocus, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
-import { SpatialHashGrid } from "./Data/Collisions/spatialHashGrid.js";
+import { SpatialHashGrid } from "./Data/Physics/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
-import { RigidBody, Immovable } from "./Data/base.js";
+import { RigidBody, Immovable } from "./Data/Physics/base.js";
 let boxes = [];
 for (let i = 0; i < Settings.insertCount; i++) {
     const factory = random(1, 20) > 19 ? Immovable : RigidBody;

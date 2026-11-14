@@ -1,11 +1,11 @@
-import { keys } from "../Globals/input.js"
-import { outline, focus, draw, ctx, newid, halfWidth, halfHeight, cam } from "../Globals/init.js"
-import * as Settings from "../Globals/settings.js"
-import { Vector, random, sq, rgba } from "../Utils/math.js"
-import { zipShift } from "../Utils/arrays.js"
-import { Shape, Polygon } from "./shape.js"
-import { Color } from "./color.js"
-import { Sprite } from "./sprite.js"
+import { keys } from "../../Globals/input.js"
+import { outline, focus, draw, ctx, newid, halfWidth, halfHeight, cam } from "../../Globals/init.js"
+import * as Settings from "../../Globals/settings.js"
+import { Vector, random, sq, rgba } from "../../Utils/math.js"
+import { zipShift } from "../../Utils/arrays.js"
+import { Shape, Polygon } from ".././shape.js"
+import { Color } from ".././color.js"
+import { Sprite } from ".././sprite.js"
 import {
   Collidable,
   CircleHitbox,
@@ -13,7 +13,7 @@ import {
   CollisionHandler,
   Collision,
   isPolygonHitbox,
-} from "./Collisions/collisions.js"
+} from "./collisions.js"
 
 export class RigidBody
   extends Collidable
