@@ -41,13 +41,15 @@ export class Polygon implements AShape {
   vertices: Vector[]
   area: number
   windingOrder: WindingOrder
-  constructor(vertices: Vector[], color: Color = new Color([0, 0, 0, 0])) {
+  constructor(vertices: Vector[], color: Color = new Color([0, 0, 0, 0]), centroid?: Vector) {
     this.type = "Polygon"
     this.vertices = vertices
     this.color = color
-    this.centroid = this.vertices
-      .reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0))
-      .divide(this.vertices.length)
+    this.centroid =
+      centroid ??
+      this.vertices
+        .reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0))
+        .divide(this.vertices.length)
     this.radius = Math.sqrt(
       this.vertices.reduce(
         (maxSqRadius, vertex) => Math.max(vertex.subtract(this.centroid).getSqMag(), maxSqRadius),

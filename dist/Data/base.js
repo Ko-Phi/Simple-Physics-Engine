@@ -60,32 +60,29 @@ export class RigidBody extends Collidable {
         const input_y = +keys.s - +keys.w;
         const input_dir = +keys.e - +keys.q;
         const translation = new Vector(input_x, input_y).normalize();
-        this.velocity = this.velocity.add(translation.divide(5));
-        this.omega += input_dir / 1000;
-        console.log(this.omega);
+        this.velocity = this.velocity.add(translation.scale(10));
+        this.omega += input_dir / 10;
     }
     update(dt) {
         this.ticks++;
-        this.position = this.position.add(this.velocity.scale(dt / Settings.period));
-        this.dir += this.omega * (dt / Settings.period);
+        this.position = this.position.add(this.velocity.scale(dt / 1000));
+        this.dir += this.omega * (dt / 1000);
         const velocity = this.velocity.getMag();
         if (velocity > Settings.mu)
             this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity));
         else
             this.velocity = new Vector(0, 0);
-        const torque = (Settings.mu * this.hitbox.radius * this.mass) / this.inertia;
+        let torque = this instanceof Immovable ? 0 : (Settings.mu * this.hitbox.radius * this.mass) / this.inertia;
         if (Math.abs(this.omega) > torque) {
             this.omega -= Math.sign(this.omega) * torque;
         }
         else
             this.omega = 0;
         if (Settings.boundedWorld) {
-            if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2) {
+            if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2)
                 this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2);
-            }
-            if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2) {
+            if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2)
                 this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2);
-            }
         }
         if (this.ticks % (60 * dt) === 0 && Settings.periodicVelocityShifts) {
             this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
@@ -147,4 +144,26 @@ export class Immovable extends RigidBody {
         return { position: this.position, velocity: this.velocity, omega: this.omega };
     }
     getKE = () => 0;
+}
+export class Bounded extends RigidBody {
+    tether;
+    springConstant;
+    constructor(base, tether, springConstant) {
+        super(base.position, base.dir, base.hitbox, base.velocity, base.rho);
+        this.tether = tether;
+        this.springConstant = springConstant;
+    }
+    draw() {
+        super.draw();
+        draw.line(this.position.x, this.position.y, this.tether.x, this.tether.y, 3, outline);
+    }
+    update(dt) {
+        const dir = this.tether.subtract(this.position).normalize();
+        const distance = this.tether.subtract(this.position).getMag();
+        this.velocity = this.velocity.add(dir.scale((distance * this.springConstant) / this.mass));
+        super.update(dt);
+    }
+    getKE = () => (this.mass * this.velocity.getSqMag()) / 2 +
+        (this.inertia * sq(this.omega)) / 2 +
+        (this.tether.subtract(this.position).getSqMag() * this.springConstant) / 2;
 }
