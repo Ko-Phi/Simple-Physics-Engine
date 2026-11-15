@@ -1,8 +1,6 @@
 export const period = 16.67;
-export const initialVelocity = false; // objects begin with an intial velocity
 export const periodicVelocityShifts = false; // velocity randomized periodically
 export const velocityMagnitude = 200; // alters the magnitude of said velocity
-export const collisionImpulse = true; // objects bounce off each other on collision
 export const restitution = 0; // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
 export const mu = 1; // add friction (should be quite small)
 export const boundedWorld = true; // whether the world teleports you at the edges or not

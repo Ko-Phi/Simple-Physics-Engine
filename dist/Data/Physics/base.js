@@ -41,14 +41,10 @@ export class RigidBody extends Collidable {
         }
         else
             throw "impossible";
-        if (Settings.initialVelocity) {
-            this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
-            this.omega = random(-0.15, 0.15);
-        }
-        else {
-            this.velocity = velocity ?? new Vector(0, 0);
-            this.omega = 0;
-        }
+        this.velocity =
+            velocity ??
+                new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
+        this.omega = random(-0.15, 0.15) * Settings.velocityMagnitude;
         this.ticks = Math.floor(random(0, 50));
     }
     getInput() {
@@ -110,20 +106,18 @@ export class RigidBody extends Collidable {
         for (const contact of contacts)
             draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));
         let { velocity, omega } = this;
-        if (Settings.collisionImpulse) {
-            for (const contact of data.contacts) {
-                const [vAC, vBC] = [refA, refB].map((ref) => contact.subtract(ref.position));
-                const contactVelocityA = refA.velocity.add(vAC.perpendicular().scale(refA.omega));
-                const contactVelocityB = refB.velocity.add(vBC.perpendicular().scale(refB.omega));
-                const velocityAB = contactVelocityB.subtract(contactVelocityA);
-                const impulseScalar = velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
-                    (axis.dotProduct(axis.scale(1 / refA.mass + 1 / refB.mass)) +
-                        sq(vAC.crossProduct(axis)) / refA.inertia +
-                        sq(vBC.crossProduct(axis)) / refB.inertia);
-                const vTC = this === refA ? vAC : vBC;
-                velocity = this.velocity.add(axis.scale((impulseScalar / this.mass) * sign));
-                omega = this.omega - ((vTC.crossProduct(axis) * impulseScalar) / this.inertia) * sign;
-            }
+        for (const contact of data.contacts) {
+            const [vAC, vBC] = [refA, refB].map((ref) => contact.subtract(ref.position));
+            const contactVelocityA = refA.velocity.add(vAC.perpendicular().scale(refA.omega));
+            const contactVelocityB = refB.velocity.add(vBC.perpendicular().scale(refB.omega));
+            const velocityAB = contactVelocityB.subtract(contactVelocityA);
+            const impulseScalar = velocityAB.scale(-1 - Settings.restitution).dotProduct(axis) /
+                (axis.dotProduct(axis.scale(1 / refA.mass + 1 / refB.mass)) +
+                    sq(vAC.crossProduct(axis)) / refA.inertia +
+                    sq(vBC.crossProduct(axis)) / refB.inertia);
+            const vTC = this === refA ? vAC : vBC;
+            velocity = this.velocity.add(axis.scale((impulseScalar / this.mass) * sign));
+            omega = this.omega - ((vTC.crossProduct(axis) * impulseScalar) / this.inertia) * sign;
         }
         return { position, velocity, omega };
     }
