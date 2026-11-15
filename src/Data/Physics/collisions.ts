@@ -85,26 +85,21 @@ export class PolygonHitbox extends Polygon implements AHitbox {
     }
   }
   closestPointToCentroidOf(position: Vector): Vector {
-    let closestPoint = new Vector(0, 0)
-    let minDistSq = Infinity
     const centroid = position.add(this.centroid)
     // loop over this object's edges
-    zipShift(this.transformedVertices).forEach(([vertexA, vertexB]) => {
-      // get closest point on side
-      const sideAB = vertexB.subtract(vertexA)
-      const sideACentroid = centroid.subtract(vertexA)
-      let projection = sideACentroid.dotProduct(sideAB) / sideAB.getSqMag()
-      projection = constrain(projection, 0, 1)
+    return zipShift(this.transformedVertices).reduce(
+      (minPair, [vertexA, vertexB]): { point: Vector; distSq: number } => {
+        // get closest point on side
+        const sideAB = vertexB.subtract(vertexA)
+        const sideACentroid = centroid.subtract(vertexA)
+        const projection = constrain(sideACentroid.dotProduct(sideAB) / sideAB.getSqMag(), 0, 1)
 
-      const point = vertexA.add(sideAB.scale(projection))
-      const difference = point.subtract(centroid)
-      const distSq = difference.getSqMag()
-      if (distSq < minDistSq) {
-        minDistSq = distSq
-        closestPoint = point
-      }
-    })
-    return closestPoint
+        const point = vertexA.add(sideAB.scale(projection))
+        const distSq = point.subtract(centroid).getSqMag()
+        return minBy((x) => x.distSq, minPair, { point, distSq })
+      },
+      { point: this.transformedVertices[0], distSq: Infinity } as { point: Vector; distSq: number }
+    ).point
   }
 }
 export const isPolygonHitbox = (shape: Hitbox): shape is PolygonHitbox => shape.type === "Polygon"
@@ -174,9 +169,7 @@ export class Collidable {
     // Circle-Polygon "Edge" Case
     if (boxA.type !== boxB.type) collisions.push(circlePolygonCheck(refA, refB))
     // Check for seperation
-    const min = collisions.reduce((prev, curr) =>
-      !prev || !curr ? false : minBy((x) => x.overlap, curr, prev)
-    )
+    const min = collisions.reduce((p, c) => (!p || !c ? false : minBy((x) => x.overlap, c, p)))
     if (min === false) return min
 
     // reorient axis when neccessary
