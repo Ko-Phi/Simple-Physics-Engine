@@ -2,15 +2,14 @@ import { Polygon, Circle } from "../../Data/shape.js";
 import { zipShift, zipWith, shift } from "../../Utils/arrays.js";
 import { draw, ctx } from "../../Globals/init.js";
 import * as Settings from "../../Globals/settings.js";
-import { Vector, rgba, sq, constrain } from "../../Utils/math.js";
+import { Vector, rgba, constrain, nearlyEqual, minBy } from "../../Utils/math.js";
 export class Aabb {
     width;
     height;
     centroid;
     constructor(width, height, centroid) {
-        this.width = width;
-        this.height = height;
-        this.centroid = centroid;
+        ;
+        [this.width, this.height, this.centroid] = [width, height, centroid];
     }
     draw(position) {
         ctx.save();
@@ -36,7 +35,6 @@ export class PolygonHitbox extends Polygon {
         this.normals = [];
         this.cachedDir = 0;
         this.lastUpdate = "None";
-        this.cachedNormals = [];
         this.cachedNormals = zipWith(this.vertices, shift(this.vertices), (vertex, nextVertex) => nextVertex.subtract(vertex).perpendicular().normalize());
         this.normals = this.cachedNormals.map((n) => n.copy());
         this.cachedCentroid = this.centroid.copy();
@@ -60,7 +58,7 @@ export class PolygonHitbox extends Polygon {
     }
     closestPointToCentroidOf(position) {
         let closestPoint = new Vector(0, 0);
-        let minDistanceSquared = Infinity;
+        let minDistSq = Infinity;
         const centroid = position.add(this.centroid);
         // loop over this object's edges
         zipShift(this.transformedVertices).forEach(([vertexA, vertexB]) => {
@@ -71,9 +69,9 @@ export class PolygonHitbox extends Polygon {
             projection = constrain(projection, 0, 1);
             const point = vertexA.add(sideAB.scale(projection));
             const difference = point.subtract(centroid);
-            const distanceSquared = difference.getSqMag();
-            if (distanceSquared < minDistanceSquared) {
-                minDistanceSquared = distanceSquared;
+            const distSq = difference.getSqMag();
+            if (distSq < minDistSq) {
+                minDistSq = distSq;
                 closestPoint = point;
             }
         });
@@ -81,6 +79,7 @@ export class PolygonHitbox extends Polygon {
     }
 }
 export const isPolygonHitbox = (shape) => shape.type === "Polygon";
+export const isCircleHitbox = (shape) => shape.type === "Circle";
 export class CircleHitbox extends Circle {
     normals;
     aabb;
@@ -120,94 +119,39 @@ export class Collidable {
     }
     checkCollision(refB) {
         const refA = this;
-        const tCentroidA = refA.hitbox.centroid.add(refA.position);
-        const tCentroidB = refB.hitbox.centroid.add(refB.position);
+        const [boxA, boxB] = [refA.hitbox, refB.hitbox];
+        const tCentroidA = boxA.centroid.add(refA.position);
+        const tCentroidB = boxB.centroid.add(refB.position);
         // common seperation axis first
-        const axes = [
-            tCentroidB.subtract(tCentroidA).normalize(),
-            ...refA.hitbox.normals,
-            ...refB.hitbox.normals,
-        ];
+        const vBA = tCentroidB.subtract(tCentroidA);
+        const axes = [vBA.normalize(), ...boxA.normals, ...boxB.normals];
         // Circle-Circle test
-        if (refA.hitbox.type === refB.hitbox.type && refA.hitbox.type === "Circle") {
-            const sqDistance = refA.hitbox.centroid
-                .add(refA.position)
-                .subtract(refB.hitbox.centroid.add(refB.position))
-                .getSqMag();
-            const radiiSum = refA.hitbox.radius + refB.hitbox.radius;
-            if (sqDistance > sq(radiiSum)) {
-                return false;
-            }
-            else {
-                const overlap = Math.sqrt(sqDistance) - radiiSum;
-                const normal = tCentroidA.subtract(tCentroidB).normalize();
-                const centroidAToCentroidB = refB.position.subtract(refA.position).normalize();
-                const contact = refA.position.add(centroidAToCentroidB.scale(refA.hitbox.radius));
-                return {
-                    axis: normal,
-                    overlap,
-                    contacts: [contact],
-                    refA: refA,
-                    refB: refB,
+        if (isCircleHitbox(boxA) && isCircleHitbox(boxB)) {
+            const radiiSum = boxA.radius + boxB.radius;
+            return vBA.getMag() > radiiSum
+                ? false
+                : {
+                    axis: vBA.normalize().negate(),
+                    overlap: vBA.getMag() - radiiSum,
+                    contacts: [refA.position.add(new Vector(vBA.theta(), boxB.radius, "dirMag"))],
+                    refA,
+                    refB,
                 };
-            }
         }
         // Base Checks
         const collisions = axes.map((axis) => projectCheck(axis, refA, refB));
         // Circle-Polygon "Edge" Case
-        if (refA.hitbox.type !== refB.hitbox.type)
+        if (boxA.type !== boxB.type)
             collisions.push(circlePolygonCheck(refA, refB));
         // Check for seperation
-        const min = collisions.reduce((prev, curr) => prev === false || curr === false ? false : curr.overlap < prev.overlap ? curr : prev);
+        const min = collisions.reduce((prev, curr) => !prev || !curr ? false : minBy((x) => x.overlap, curr, prev));
         if (min === false)
             return min;
         // reorient axis when neccessary
         const direction = tCentroidB.subtract(tCentroidA);
         if (min.axis.dotProduct(direction) < 0)
             min.axis = min.axis.negate();
-        let contactPoints = [];
-        const collisionType = refA.hitbox.type + "-" + refB.hitbox.type;
-        if (collisionType === "Polygon-Polygon") {
-            const [polyA, polyB] = [refA.hitbox, refB.hitbox];
-            /* Visualization:
-                 A is the checked vertex. BC is the current edge of the other base. P is the closest point
-                   B
-                  /|
-                 A-P
-                  \|
-                   C
-              */
-            // base loop -> vertex -> side loop
-            zipShift([polyA, polyB]).forEach(([hitbox, otherHitbox]) => {
-                const vertices = hitbox.transformedVertices;
-                const otherVertices = otherHitbox.transformedVertices;
-                vertices.forEach((vertexA) => {
-                    zipShift(otherVertices).forEach(([vertexB, vertexC]) => {
-                        const sideBC = vertexC.subtract(vertexB);
-                        const sideBA = vertexA.subtract(vertexB);
-                        let projection = constrain(sideBA.dotProduct(sideBC) / sideBC.getSqMag(), 0, 1);
-                        const point = vertexB.add(sideBC.scale(projection));
-                        const sideAP = point.subtract(vertexA);
-                        const distanceSquared = sideAP.getSqMag();
-                        if (distanceSquared < 1 && contactPoints.length < 2) {
-                            if (contactPoints.length === 1) {
-                                if (contactPoints[0].subtract(point).getSqMag() > 0.01)
-                                    contactPoints.push(point);
-                            }
-                            else
-                                contactPoints.push(point);
-                        }
-                    });
-                });
-            });
-            if (contactPoints.length === 0)
-                contactPoints.push(polyA.closestPointToCentroidOf(refB.position));
-        }
-        else if (collisionType === "Polygon-Circle" || collisionType === "Circle-Polygon") {
-            let [circleBase, polyBox] = (refA.hitbox.type === "Circle" ? [refA, refB.hitbox] : [refB, refA.hitbox]);
-            contactPoints.push(polyBox.closestPointToCentroidOf(circleBase.position));
-        }
-        return { ...min, contacts: contactPoints };
+        return { ...min, contacts: getContacts(refA, refB) };
     }
 }
 function shallowUpdate(hitbox, position, dir) {
@@ -232,6 +176,57 @@ function projectCheck(axis, refA, refB) {
         return false;
     const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min);
     return { overlap, axis, refA, refB };
+}
+/* Visualization:
+       A is the checked vertex. BC is the current edge of the other base. P is the closest point
+         B
+        /|
+       A-P
+        \|
+         C
+*/
+// base loop -> vertex -> side loop
+function project(A, B, C) {
+    const BC = C.subtract(B);
+    const BA = A.subtract(B);
+    const projection = constrain(BA.dotProduct(BC) / BC.getSqMag(), 0, 1);
+    const point = B.add(BC.scale(projection));
+    const distSq = point.subtract(A).getSqMag();
+    return { point, distSq };
+}
+function getContacts(refA, refB) {
+    let contacts = [];
+    if (isPolygonHitbox(refA.hitbox) && isPolygonHitbox(refB.hitbox)) {
+        let minDistSq = Infinity;
+        const [polyA, polyB] = [refA.hitbox, refB.hitbox];
+        let pair1 = project(polyA.transformedVertices[0], polyB.transformedVertices[0], polyB.transformedVertices[1]);
+        let pair2 = { point: pair1.point.copy(), distSq: pair1.distSq };
+        zipShift([polyA, polyB]).forEach(([hitbox, otherHitbox]) => {
+            hitbox.transformedVertices.forEach((A) => {
+                zipShift(otherHitbox.transformedVertices).forEach(([B, C]) => {
+                    const { point: point, distSq: distSq } = project(A, B, C);
+                    if (nearlyEqual(minDistSq, distSq, 5)) {
+                        if (!pair1.point.equalTo(point)) {
+                            pair2 = { point, distSq };
+                        }
+                    }
+                    else if (distSq < minDistSq)
+                        [minDistSq, pair1] = [distSq, { point, distSq }];
+                });
+            });
+        });
+        contacts =
+            !nearlyEqual(pair1.distSq, pair2.distSq, 5) || pair1.point.equalTo(pair2.point)
+                ? [pair1.point]
+                : [pair1.point, pair2.point];
+    }
+    else if (refA.hitbox.type !== refB.hitbox.type) {
+        if (isPolygonHitbox(refA.hitbox) && isCircleHitbox(refB.hitbox))
+            contacts.push(refA.hitbox.closestPointToCentroidOf(refB.position));
+        else if (isPolygonHitbox(refB.hitbox) && isCircleHitbox(refA.hitbox))
+            contacts.push(refB.hitbox.closestPointToCentroidOf(refA.position));
+    }
+    return contacts;
 }
 function circlePolygonCheck(refA, refB) {
     // get closest point on edge and add to normals

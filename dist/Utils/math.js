@@ -16,6 +16,9 @@ export const rgba = (...inputs) => {
         channels = inputs;
     return "#" + channels.map((c) => c.toString(16).padStart(2, "0")).join("");
 };
+export const nearlyEqual = (x, y, scale = 1e-6) => Math.abs(x - y) < scale;
+export const compareWithBy = (c, f, x, y) => c(f(x), f(y));
+export const minBy = (f, x, y) => compareWithBy((x, y) => x < y, f, x, y) ? x : y;
 export class Vector {
     x;
     y;
@@ -41,5 +44,5 @@ export class Vector {
     perpendicular = () => new Vector(-this.y, this.x);
     rotate = (θ) => new Vector(this.x * Math.cos(θ) - this.y * Math.sin(θ), this.x * Math.sin(θ) + this.y * Math.cos(θ));
     display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
-    equalTo = (vector) => this.x === vector.x && this.y === vector.y;
+    equalTo = (v, scale = 1e-6) => this.subtract(v).getMag() < scale;
 }

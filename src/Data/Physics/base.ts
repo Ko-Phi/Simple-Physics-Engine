@@ -32,7 +32,7 @@ export class RigidBody
   trueColor: Color
 
   ticks: number
-  constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector, rho: number = 1) {
+  constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector, rho: number = 1e-3) {
     const hitbox =
       shape instanceof Polygon
         ? new PolygonHitbox(shape, position, dir)

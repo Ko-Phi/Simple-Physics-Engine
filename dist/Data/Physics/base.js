@@ -17,7 +17,7 @@ export class RigidBody extends Collidable {
     sprite;
     trueColor;
     ticks;
-    constructor(position, dir, shape, velocity, rho = 1) {
+    constructor(position, dir, shape, velocity, rho = 1e-3) {
         const hitbox = shape instanceof Polygon
             ? new PolygonHitbox(shape, position, dir)
             : new CircleHitbox(shape, position, dir);

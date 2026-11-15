@@ -15,6 +15,15 @@ export const rgba = (...inputs: number[]): string => {
   else channels = inputs
   return "#" + channels.map((c) => c.toString(16).padStart(2, "0")).join("")
 }
+export const nearlyEqual = (x: number, y: number, scale: number = 1e-6) => Math.abs(x - y) < scale
+export const compareWithBy = <A, B, C>(
+  c: (x: C, y: C) => boolean,
+  f: (x: A | B) => C,
+  x: A,
+  y: B
+): boolean => c(f(x), f(y))
+export const minBy = <A, B>(f: (x: A | B) => number, x: A, y: B) =>
+  compareWithBy((x, y) => x < y, f, x, y) ? x : y
 
 type VectorInit = "component" | "dirMag"
 export class Vector {
@@ -45,5 +54,5 @@ export class Vector {
       this.x * Math.sin(θ) + this.y * Math.cos(θ)
     )
   display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3)
-  equalTo = (vector: Vector) => this.x === vector.x && this.y === vector.y
+  equalTo = (v: Vector, scale: number = 1e-6): boolean => this.subtract(v).getMag() < scale
 }
