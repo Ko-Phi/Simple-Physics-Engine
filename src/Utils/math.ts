@@ -53,6 +53,11 @@ export class Vector {
       this.x * Math.cos(θ) - this.y * Math.sin(θ),
       this.x * Math.sin(θ) + this.y * Math.cos(θ)
     )
+  projectS = (v: Vector): number => this.dotProduct(v) / v.getSqMag()
+  project = (v: Vector): Vector => v.scale(this.dotProduct(v) / v.getSqMag())
+  projectConstrain = (v: Vector): Vector =>
+    v.scale(constrain(this.dotProduct(v) / v.getSqMag(), 0, 1))
+  pointTo = (v: Vector): Vector => (this.dotProduct(v) < 0 ? this.negate() : this.copy())
   display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3)
   equalTo = (v: Vector, scale: number = 1e-6): boolean => this.subtract(v).getMag() < scale
 }

@@ -43,6 +43,10 @@ export class Vector {
     crossProduct = (v) => -(this.x * v.y - this.y * v.x); // As world is inverted-cartesian
     perpendicular = () => new Vector(-this.y, this.x);
     rotate = (θ) => new Vector(this.x * Math.cos(θ) - this.y * Math.sin(θ), this.x * Math.sin(θ) + this.y * Math.cos(θ));
+    projectS = (v) => this.dotProduct(v) / v.getSqMag();
+    project = (v) => v.scale(this.dotProduct(v) / v.getSqMag());
+    projectConstrain = (v) => v.scale(constrain(this.dotProduct(v) / v.getSqMag(), 0, 1));
+    pointTo = (v) => (this.dotProduct(v) < 0 ? this.negate() : this.copy());
     display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3);
     equalTo = (v, scale = 1e-6) => this.subtract(v).getMag() < scale;
 }

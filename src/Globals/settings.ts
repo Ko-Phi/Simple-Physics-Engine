@@ -1,9 +1,9 @@
 export const period = 16.67
 
 export const periodicVelocityShifts = false // velocity randomized periodically
-export const velocityMagnitude = 200 // alters the magnitude of said velocity
+export const velocityMagnitude = 100 // alters the magnitude of said velocity
 export const restitution = 0 // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
-export const mu = 1 // add friction (should be quite small)
+export const mu = 2 // add friction (should be quite small)
 export const boundedWorld = true // whether the world teleports you at the edges or not
 
 export const allCircles = false // all shapes are circles. Increases performance as well

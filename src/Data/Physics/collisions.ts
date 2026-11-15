@@ -2,20 +2,16 @@ import { Polygon, Circle } from "../../Data/shape.js"
 import { zipShift, zipWith, shift } from "../../Utils/arrays.js"
 import { draw, ctx } from "../../Globals/init.js"
 import * as Settings from "../../Globals/settings.js"
-import { Vector, rgba, constrain, nearlyEqual, minBy } from "../../Utils/math.js"
+import { Vector, rgba, nearlyEqual, minBy } from "../../Utils/math.js"
 
-export type Collision<A extends Collidable, B extends Collidable> = {
-  axis: Vector
-  overlap: number
-  contacts: Vector[]
-  refA: A
-  refB: B
-}
 type Intersection<A extends Collidable, B extends Collidable> = {
   axis: Vector
   overlap: number
   refA: A
   refB: B
+}
+export type Collision<A extends Collidable, B extends Collidable> = Intersection<A, B> & {
+  contacts: Vector[]
 }
 
 type Seperation = false
@@ -91,10 +87,8 @@ export class PolygonHitbox extends Polygon implements AHitbox {
       (minPair, [vertexA, vertexB]): { point: Vector; distSq: number } => {
         // get closest point on side
         const sideAB = vertexB.subtract(vertexA)
-        const sideACentroid = centroid.subtract(vertexA)
-        const projection = constrain(sideACentroid.dotProduct(sideAB) / sideAB.getSqMag(), 0, 1)
-
-        const point = vertexA.add(sideAB.scale(projection))
+        const sideAC = centroid.subtract(vertexA)
+        const point = vertexA.add(sideAC.projectConstrain(sideAB))
         const distSq = point.subtract(centroid).getSqMag()
         return minBy((x) => x.distSq, minPair, { point, distSq })
       },
@@ -170,25 +164,22 @@ export class Collidable {
     if (boxA.type !== boxB.type) collisions.push(circlePolygonCheck(refA, refB))
     // Check for seperation
     const min = collisions.reduce((p, c) => (!p || !c ? false : minBy((x) => x.overlap, c, p)))
-    if (min === false) return min
 
     // reorient axis when neccessary
-    const direction = tCentroidB.subtract(tCentroidA)
-    if (min.axis.dotProduct(direction) < 0) min.axis = min.axis.negate()
-    return { ...min, contacts: getContacts(refA, refB) }
+    return !min
+      ? min
+      : {
+          ...{ ...min, axis: min.axis.pointTo(tCentroidB.subtract(tCentroidA)) },
+          contacts: getContacts(refA, refB),
+        }
   }
 }
 function shallowUpdate(hitbox: Hitbox, position: Vector, dir: number) {
   hitbox.lastUpdate = "AABB"
   // check if rotation recalc neccessary
-  if (dir !== hitbox.cachedDir && hitbox.cachedCentroid.getSqMag() !== 0) {
-    hitbox.centroid = hitbox.cachedCentroid.rotate(dir)
-    hitbox.aabb.centroid = hitbox.centroid
-    hitbox.cachedDir = dir
-  }
-  if (!Settings.displayAABB) return
-  // display AABB (note aabb centroid points to base centroid)
-  hitbox.aabb.draw(position)
+  if (dir !== hitbox.cachedDir && hitbox.cachedCentroid.getSqMag() !== 0)
+    hitbox.aabb.centroid = hitbox.centroid = hitbox.cachedCentroid.rotate((hitbox.cachedDir = dir))
+  if (Settings.displayAABB) hitbox.aabb.draw(position)
 }
 function projectCheck<A extends Collidable, B extends Collidable>(
   axis: Vector,
@@ -213,10 +204,8 @@ function projectCheck<A extends Collidable, B extends Collidable>(
 */
 // base loop -> vertex -> side loop
 function project(A: Vector, B: Vector, C: Vector) {
-  const BC = C.subtract(B)
-  const BA = A.subtract(B)
-  const projection = constrain(BA.dotProduct(BC) / BC.getSqMag(), 0, 1)
-  const point = B.add(BC.scale(projection))
+  const [BC, BA] = [C.subtract(B), A.subtract(B)]
+  const point = B.add(BA.projectConstrain(BC))
   const distSq = point.subtract(A).getSqMag()
   return { point, distSq }
 }
@@ -234,12 +223,10 @@ function getContacts<A extends Collidable, B extends Collidable>(refA: A, refB: 
     zipShift([polyA, polyB]).forEach(([hitbox, otherHitbox]) => {
       hitbox.transformedVertices.forEach((A) => {
         zipShift(otherHitbox.transformedVertices).forEach(([B, C]) => {
-          const { point: point, distSq: distSq } = project(A, B, C)
-          if (nearlyEqual(minDistSq, distSq, 5)) {
-            if (!pair1.point.equalTo(point)) {
-              pair2 = { point, distSq }
-            }
-          } else if (distSq < minDistSq) [minDistSq, pair1] = [distSq, { point, distSq }]
+          const curr = project(A, B, C)
+          if (nearlyEqual(minDistSq, curr.distSq, 5) && !pair1.point.equalTo(curr.point))
+            pair2 = curr
+          else pair1 = minBy((x) => x.distSq, pair1, curr)
         })
       })
     })
