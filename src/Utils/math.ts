@@ -15,6 +15,23 @@ export const rgba = (...inputs: number[]): string => {
   else channels = inputs
   return "#" + channels.map((c) => c.toString(16).padStart(2, "0")).join("")
 }
+export const hsva = (hue: number, sat: number, val: number, alpha: number = 255): string => {
+  const hueP = hue / 60
+  const chroma = val * sat
+  const x = chroma * (1 - Math.abs((hueP % 2) - 1))
+
+  let r, g, b
+  if (hueP < 1) [r, g, b] = [chroma, x, 0]
+  else if (hueP < 2) [r, g, b] = [x, chroma, 0]
+  else if (hueP < 3) [r, g, b] = [0, chroma, x]
+  else if (hueP < 4) [r, g, b] = [0, x, chroma]
+  else if (hueP < 5) [r, g, b] = [x, 0, chroma]
+  else if (hueP < 6) [r, g, b] = [chroma, 0, x]
+  else throw new Error("RGB undefined")
+
+  const channels = [r, g, b].map((c) => Math.floor((c + val - chroma) * 255))
+  return rgba(...channels, alpha)
+}
 export const nearlyEqual = (x: number, y: number, scale: number = 1e-6) => Math.abs(x - y) < scale
 export const compareWithBy = <A, B, C>(
   c: (x: C, y: C) => boolean,

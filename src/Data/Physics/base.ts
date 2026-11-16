@@ -1,10 +1,9 @@
 import { keys } from "../../Globals/input.js"
 import { outline, focus, draw, ctx, newid, halfWidth, halfHeight, cam } from "../../Globals/init.js"
 import * as Settings from "../../Globals/settings.js"
-import { Vector, random, sq, rgba } from "../../Utils/math.js"
+import { Vector, random, sq, rgba, hsva } from "../../Utils/math.js"
 import { zipShift } from "../../Utils/arrays.js"
 import { Shape, Polygon } from ".././shape.js"
-import { Color } from ".././color.js"
 import { Sprite } from ".././sprite.js"
 import {
   Collidable,
@@ -40,7 +39,7 @@ export class RigidBody
     super(hitbox, position, dir)
     this.id = newid()
     this.sprite = new Sprite([shape])
-    this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV").cachedValue
+    this.trueColor = hsva(random(-15, 40), 0.6, 1)
 
     this.rho = rho
     this.mass = this.hitbox.area * this.rho
