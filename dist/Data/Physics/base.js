@@ -24,7 +24,7 @@ export class RigidBody extends Collidable {
         super(hitbox, position, dir);
         this.id = newid();
         this.sprite = new Sprite([shape]);
-        this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV");
+        this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV").cachedValue;
         this.rho = rho;
         this.mass = this.hitbox.area * this.rho;
         if (this.hitbox.type === "Circle") {
@@ -87,7 +87,7 @@ export class RigidBody extends Collidable {
         if (focus !== this.id)
             this.sprite.shapes[0].color = this.trueColor;
         else
-            this.sprite.shapes[0].color = new Color([150, 200, 150]);
+            this.sprite.shapes[0].color = rgba(150, 200, 150);
     }
     draw() {
         ctx.save();
@@ -130,7 +130,7 @@ export class Immovable extends RigidBody {
     omega = 0;
     constructor(position, dir, shape) {
         super(position, dir, shape);
-        this.trueColor = new Color([160, 160, 160]);
+        this.trueColor = rgba(160, 160, 160);
     }
     handleCollision(data) {
         for (const contact of data.contacts)

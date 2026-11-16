@@ -25,6 +25,11 @@ export const compareWithBy = <A, B, C>(
 export const minBy = <A, B>(f: (x: A | B) => number, x: A, y: B) =>
   compareWithBy((x, y) => x < y, f, x, y) ? x : y
 
+export const pair = <A, B>(x: A, y: B): [A, B] => [x, y]
+export const liftA2 = <A, B, C, D>(p: (c: B, d: C) => D, f: (a: A) => B, g: (a: A) => C, x: A): D =>
+  p(f(x), g(x))
+export const liftPair = <A, B, C>(f: (a: A) => B, g: (a: A) => C, x: A) => liftA2(pair, f, g, x)
+
 type VectorInit = "component" | "dirMag"
 export class Vector {
   x: number
@@ -53,8 +58,6 @@ export class Vector {
       this.x * Math.cos(θ) - this.y * Math.sin(θ),
       this.x * Math.sin(θ) + this.y * Math.cos(θ)
     )
-  projectS = (v: Vector): number => this.dotProduct(v) / v.getSqMag()
-  project = (v: Vector): Vector => v.scale(this.dotProduct(v) / v.getSqMag())
   projectConstrain = (v: Vector): Vector =>
     v.scale(constrain(this.dotProduct(v) / v.getSqMag(), 0, 1))
   pointTo = (v: Vector): Vector => (this.dotProduct(v) < 0 ? this.negate() : this.copy())

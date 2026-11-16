@@ -29,7 +29,7 @@ export class RigidBody
   velocity: Vector
   omega: number
   sprite: Sprite
-  trueColor: Color
+  trueColor: string
 
   ticks: number
   constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector, rho: number = 1e-3) {
@@ -40,7 +40,7 @@ export class RigidBody
     super(hitbox, position, dir)
     this.id = newid()
     this.sprite = new Sprite([shape])
-    this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV")
+    this.trueColor = new Color([random(-15, 40), 0.6, 1], "HSV").cachedValue
 
     this.rho = rho
     this.mass = this.hitbox.area * this.rho
@@ -109,7 +109,7 @@ export class RigidBody
       this.omega = random(-0.01, 0.01) * Settings.scale
     }
     if (focus !== this.id) this.sprite.shapes[0].color = this.trueColor
-    else this.sprite.shapes[0].color = new Color([150, 200, 150])
+    else this.sprite.shapes[0].color = rgba(150, 200, 150)
   }
   draw() {
     ctx.save()
@@ -160,7 +160,7 @@ export class Immovable extends RigidBody {
 
   constructor(position: Vector, dir: number, shape: Shape) {
     super(position, dir, shape)
-    this.trueColor = new Color([160, 160, 160])
+    this.trueColor = rgba(160, 160, 160)
   }
   handleCollision(data: Collision<RigidBody, RigidBody>) {
     for (const contact of data.contacts) draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50))

@@ -1,7 +1,6 @@
 import { ctx, draw as drawer, outline } from "../Globals/init.js";
 import { zipShift } from "../Utils/arrays.js";
-import { Color } from "./color.js";
-import { Vector, sq } from "../Utils/math.js";
+import { Vector, rgba, sq } from "../Utils/math.js";
 export function regularPolyVerts(x, y, radius, sideCount) {
     const vertices = [];
     for (let i = 0; i < sideCount; i++)
@@ -24,7 +23,7 @@ export class Polygon {
     vertices;
     area;
     windingOrder;
-    constructor(vertices, color = new Color([0, 0, 0, 0]), centroid) {
+    constructor(vertices, color = rgba(0, 0, 0, 0), centroid) {
         this.type = "Polygon";
         this.vertices = vertices;
         this.color = color;
@@ -42,7 +41,7 @@ export class Polygon {
         ctx.save();
         ctx.translate(dx, dy);
         ctx.rotate(dir);
-        drawer.polygon(this.vertices, this.color.cachedValue, 1, outline);
+        drawer.polygon(this.vertices, this.color, 1, outline);
         ctx.restore();
     }
 }
@@ -52,7 +51,7 @@ export class Circle {
     color;
     radius;
     area;
-    constructor(radius, color = new Color([0, 0, 0, 0]), centroid = new Vector(0, 0)) {
+    constructor(radius, color = rgba(0, 0, 0, 0), centroid = new Vector(0, 0)) {
         this.type = "Circle";
         this.centroid = centroid;
         this.radius = radius;
@@ -62,7 +61,7 @@ export class Circle {
     draw(dx, dy, θ) {
         ctx.save();
         ctx.translate(dx + this.centroid.x, dy + this.centroid.y);
-        drawer.ellipse(0, 0, this.radius * 2, this.radius * 2, this.color.cachedValue, 2, outline);
+        drawer.ellipse(0, 0, this.radius * 2, this.radius * 2, this.color, 2, outline);
         drawer.line(0, 0, this.radius * Math.cos(θ), this.radius * Math.sin(θ), 0.5, outline);
         ctx.restore();
     }

@@ -1,7 +1,6 @@
 import { ctx, draw as drawer, outline } from "../Globals/init.js"
 import { zipShift } from "../Utils/arrays.js"
-import { Color } from "./color.js"
-import { Vector, sq } from "../Utils/math.js"
+import { Vector, rgba, sq } from "../Utils/math.js"
 
 export function regularPolyVerts(x: number, y: number, radius: number, sideCount: number) {
   const vertices = []
@@ -28,7 +27,7 @@ abstract class AShape {
   abstract type: ShapeType
   abstract centroid: Vector
   abstract radius: number
-  abstract color: Color
+  abstract color: string
   abstract draw: (x: number, y: number, θ: number) => void
   abstract area: number
 }
@@ -36,12 +35,12 @@ abstract class AShape {
 export class Polygon implements AShape {
   type: ShapeType
   centroid: Vector
-  color: Color
+  color: string
   radius: number
   vertices: Vector[]
   area: number
   windingOrder: WindingOrder
-  constructor(vertices: Vector[], color: Color = new Color([0, 0, 0, 0]), centroid?: Vector) {
+  constructor(vertices: Vector[], color: string = rgba(0, 0, 0, 0), centroid?: Vector) {
     this.type = "Polygon"
     this.vertices = vertices
     this.color = color
@@ -67,7 +66,7 @@ export class Polygon implements AShape {
     ctx.save()
     ctx.translate(dx, dy)
     ctx.rotate(dir)
-    drawer.polygon(this.vertices, this.color.cachedValue, 1, outline)
+    drawer.polygon(this.vertices, this.color, 1, outline)
     ctx.restore()
   }
 }
@@ -75,12 +74,12 @@ export class Polygon implements AShape {
 export class Circle implements AShape {
   type: ShapeType
   centroid: Vector
-  color: Color
+  color: string
   radius: number
   area: number
   constructor(
     radius: number,
-    color: Color = new Color([0, 0, 0, 0]),
+    color: string = rgba(0, 0, 0, 0),
     centroid: Vector = new Vector(0, 0)
   ) {
     this.type = "Circle"
@@ -92,7 +91,7 @@ export class Circle implements AShape {
   draw(dx: number, dy: number, θ: number) {
     ctx.save()
     ctx.translate(dx + this.centroid.x, dy + this.centroid.y)
-    drawer.ellipse(0, 0, this.radius * 2, this.radius * 2, this.color.cachedValue, 2, outline)
+    drawer.ellipse(0, 0, this.radius * 2, this.radius * 2, this.color, 2, outline)
     drawer.line(0, 0, this.radius * Math.cos(θ), this.radius * Math.sin(θ), 0.5, outline)
     ctx.restore()
   }

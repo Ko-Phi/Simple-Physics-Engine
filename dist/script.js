@@ -1,16 +1,15 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { keys, mouse } from "./Globals/input.js";
-import { Color } from "./Data/color.js";
 import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, setFocus, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Physics/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
 import { Polygon, Circle, regularPolyVerts, polyVerts } from "./Data/shape.js";
-import { RigidBody, Immovable } from "./Data/Physics/base.js";
+import { RigidBody, Immovable, Bounded } from "./Data/Physics/base.js";
 let boxes = [];
 for (let i = 0; i < Settings.insertCount; i++) {
     const factory = random(1, 20) > 19 ? Immovable : RigidBody;
-    let color = new Color([160, 160, 160]);
+    let color = rgba(160, 160, 160);
     let shape = (Math.ceil(random(0, 5)) > 3 && !Settings.allCircles) || Settings.allPolys
         ? new Polygon(regularPolyVerts(0, 0, Math.ceil(Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance)), Math.ceil(random(2, 7))), color)
         : new Circle(Math.ceil(Settings.scale * random(0.9, 1.1)), color);
@@ -22,7 +21,12 @@ for (let i = 0; i < Settings.insertCount; i++) {
     boxes.push(new factory(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
 }
 if (Settings.insertCount === 0)
-    boxes.push(new RigidBody(new Vector(-100, 0), 0, new Circle(20, new Color([255, 0, 0])), new Vector(1, 0)), new RigidBody(new Vector(100, 0), 0, new Circle(100, new Color([255, 0, 0]))), new RigidBody(new Vector(0, -100), 0, new Circle(35, new Color([255, 0, 0]))), new RigidBody(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), new Color([255, 0, 0]))), new RigidBody(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), new Color([255, 0, 0]))));
+    boxes.push(new RigidBody(new Vector(-100, 0), 0, new Circle(20, rgba(255, 0, 0)), new Vector(1, 0)), new RigidBody(new Vector(100, 0), 0, new Circle(100, rgba(255, 0, 0))), new RigidBody(new Vector(0, -100), 0, new Circle(35, rgba(255, 0, 0))), new RigidBody(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), rgba(255, 0, 0))), new RigidBody(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), rgba(255, 0, 0))));
+let color = rgba(160, 160, 160);
+let hWidth = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * random(2, 4);
+let hHeight = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5;
+const shape = new Polygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), color);
+boxes.push(new Bounded(new RigidBody(new Vector(0, 100), 0, shape), new Vector(0, 0), 1));
 import { PerformanceProfile } from "./Utils/profiler.js";
 const Perf = new PerformanceProfile("boxUpdate", "aabbUpdate", "gridUpdate", "gridQuery", "priorCheck", "hitboxUpdate", "satCheck", "drawBoxes", "handleCollisions");
 let ticksSinceInput = 0;
