@@ -25,8 +25,8 @@ export class PolygonHitbox extends Polygon {
     normals;
     aabb;
     transformedVertices;
-    cachedDir;
     lastUpdate;
+    cachedDir;
     cachedNormals;
     cachedCentroid;
     constructor(shape, position, dir) {
@@ -74,8 +74,8 @@ export const isCircleHitbox = (shape) => shape.type === "Circle";
 export class CircleHitbox extends Circle {
     normals;
     aabb;
-    cachedDir;
     lastUpdate;
+    cachedDir;
     cachedCentroid;
     constructor(circle, position, dir) {
         super(circle.radius, circle.color, circle.centroid);

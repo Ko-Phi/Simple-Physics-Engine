@@ -37,7 +37,7 @@ export abstract class AHitbox {
   abstract normals: Vector[]
   abstract aabb: Aabb
   abstract cachedDir: number
-  abstract cachedCentroid: Vector
+  abstract readonly cachedCentroid: Vector
   abstract lastUpdate: UpdateType
   abstract shallowUpdate: (position: Vector, dir: number) => void
   abstract narrowUpdate: (position: Vector, dir: number) => void
@@ -48,10 +48,10 @@ export class PolygonHitbox extends Polygon implements AHitbox {
   normals: Vector[]
   aabb: Aabb
   transformedVertices: Vector[]
-  cachedDir: number
   lastUpdate: UpdateType
-  cachedNormals: Vector[]
-  cachedCentroid: Vector
+  cachedDir: number
+  readonly cachedNormals: Vector[]
+  readonly cachedCentroid: Vector
   constructor(shape: Polygon, position: Vector, dir: number) {
     super(shape.vertices, shape.color)
     this.transformedVertices = []
@@ -102,9 +102,9 @@ export const isCircleHitbox = (shape: Hitbox): shape is CircleHitbox => shape.ty
 export class CircleHitbox extends Circle implements AHitbox {
   normals: Vector[]
   aabb: Aabb
-  cachedDir: number
   lastUpdate: UpdateType
-  cachedCentroid: Vector
+  cachedDir: number
+  readonly cachedCentroid: Vector
   constructor(circle: Circle, position: Vector, dir: number) {
     super(circle.radius, circle.color, circle.centroid)
     this.normals = []
@@ -130,7 +130,7 @@ export class Collidable {
   indices: Vector[]
   position: Vector
   dir: number
-  hitbox: Hitbox
+  readonly hitbox: Hitbox
   constructor(hitbox: Hitbox, position: Vector, dir: number) {
     this.indices = []
     this.hitbox = hitbox

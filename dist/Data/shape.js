@@ -17,12 +17,12 @@ class AShape {
 }
 export class Polygon {
     type;
-    centroid;
-    color;
     radius;
     vertices;
     area;
     windingOrder;
+    centroid;
+    color;
     constructor(vertices, color = rgba(0, 0, 0, 0), centroid) {
         this.type = "Polygon";
         this.vertices = vertices;
@@ -47,10 +47,10 @@ export class Polygon {
 }
 export class Circle {
     type;
-    centroid;
-    color;
     radius;
     area;
+    centroid;
+    color;
     constructor(radius, color = rgba(0, 0, 0, 0), centroid = new Vector(0, 0)) {
         this.type = "Circle";
         this.centroid = centroid;

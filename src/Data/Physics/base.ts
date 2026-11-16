@@ -19,15 +19,13 @@ export class RigidBody
   implements
     CollisionHandler<RigidBody, RigidBody, { position: Vector; velocity: Vector; omega: number }>
 {
-  id: number
-
-  rho: number
-  mass: number
-  inertia: number
-
+  readonly id: number
+  readonly rho: number
+  readonly mass: number
+  readonly inertia: number
+  readonly sprite: Sprite
   velocity: Vector
   omega: number
-  sprite: Sprite
   trueColor: string
 
   ticks: number
@@ -151,12 +149,10 @@ export class RigidBody
 }
 
 export class Immovable extends RigidBody {
-  mass: number = Infinity
-  inertia: number = Infinity
-
+  readonly mass: number = Infinity
+  readonly inertia: number = Infinity
   velocity: Vector = new Vector(0, 0)
   omega: number = 0
-
   constructor(position: Vector, dir: number, shape: Shape) {
     super(position, dir, shape)
     this.trueColor = rgba(160, 160, 160)
@@ -168,8 +164,8 @@ export class Immovable extends RigidBody {
   getKE = () => 0
 }
 export class Bounded extends RigidBody {
-  tether: Vector
-  springConstant: number
+  readonly tether: Vector
+  readonly springConstant: number
   constructor(base: RigidBody, tether: Vector, springConstant: number) {
     super(base.position, base.dir, base.hitbox, base.velocity, base.rho)
     this.tether = tether

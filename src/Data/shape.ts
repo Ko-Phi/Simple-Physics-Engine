@@ -24,22 +24,22 @@ type ShapeType = "Polygon" | "Circle"
 type WindingOrder = "CW" | "CCW"
 
 abstract class AShape {
-  abstract type: ShapeType
+  abstract readonly type: ShapeType
+  abstract readonly radius: number
   abstract centroid: Vector
-  abstract radius: number
   abstract color: string
   abstract draw: (x: number, y: number, θ: number) => void
   abstract area: number
 }
 
 export class Polygon implements AShape {
-  type: ShapeType
+  readonly type: ShapeType
+  readonly radius: number
+  readonly vertices: Vector[]
+  readonly area: number
+  readonly windingOrder: WindingOrder
   centroid: Vector
   color: string
-  radius: number
-  vertices: Vector[]
-  area: number
-  windingOrder: WindingOrder
   constructor(vertices: Vector[], color: string = rgba(0, 0, 0, 0), centroid?: Vector) {
     this.type = "Polygon"
     this.vertices = vertices
@@ -72,11 +72,11 @@ export class Polygon implements AShape {
 }
 
 export class Circle implements AShape {
-  type: ShapeType
+  readonly type: ShapeType
+  readonly radius: number
+  readonly area: number
   centroid: Vector
   color: string
-  radius: number
-  area: number
   constructor(
     radius: number,
     color: string = rgba(0, 0, 0, 0),

@@ -4,10 +4,10 @@ import { Collidable } from "./collisions.js"
 import { Vector, rgba } from "../../Utils/math.js"
 
 export class SpatialHashGrid {
-  cellsChecked
-  grid: Map<string, any>
-  dimensions: Vector
-  cellSize: number
+  cellsChecked: number
+  readonly grid: Map<string, any>
+  readonly dimensions: Vector
+  readonly cellSize: number
   queryIds: number
   constructor(cellSize: number, dimensions: Vector) {
     this.grid = new Map()

@@ -11,9 +11,9 @@ export class RigidBody extends Collidable {
     rho;
     mass;
     inertia;
+    sprite;
     velocity;
     omega;
-    sprite;
     trueColor;
     ticks;
     constructor(position, dir, shape, velocity, rho = 1e-3) {

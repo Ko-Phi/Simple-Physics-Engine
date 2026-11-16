@@ -20,7 +20,7 @@ export const setFocus = (n: number) => (focus = n)
 class Camera<Type extends { position: Vector }> {
   position: Vector
   target: Type
-  smoothing: number = 0.1
+  readonly smoothing: number = 0.1
   trauma: number = 0
   constructor(target: Type, position: Vector = target.position) {
     this.target = target
