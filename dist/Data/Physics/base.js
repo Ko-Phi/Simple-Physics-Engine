@@ -55,11 +55,11 @@ export class RigidBody extends Collidable {
             return;
         if (Settings.cameraTrack && cam.target !== this)
             cam.target = this;
-        const input_x = +keys.d - +keys.a;
-        const input_y = +keys.s - +keys.w;
-        const input_dir = +keys.e - +keys.q;
-        this.forces["input"] = new Vector(input_x, input_y).normalize().scale(10 * this.mass);
-        this.omega += input_dir / 10;
+        const inputX = +keys.d - +keys.a;
+        const inputY = +keys.s - +keys.w;
+        const inputDir = +keys.e - +keys.q;
+        this.forces["input"] = new Vector(inputX, inputY).normalize().scale(500 * this.mass);
+        this.torques["input"] = inputDir / 300;
     }
     update(dt) {
         const friction = this.velocity
@@ -86,8 +86,10 @@ export class RigidBody extends Collidable {
         }
         this.velocity = this.velocity.add(Object.values(this.forces)
             .reduce((acc, curr) => acc.add(curr), new Vector(0, 0))
-            .divide(this.mass));
-        this.omega += Object.values(this.torques).reduce((acc, curr) => acc + curr, 0) / this.inertia;
+            .scale(dt / (this.mass * 1000)));
+        this.omega +=
+            (Object.values(this.torques).reduce((acc, curr) => acc + curr, 0) * (dt / 1000)) /
+                this.inertia;
         this.position = this.position.add(this.velocity.scale(dt / 1000));
         this.dir += this.omega * (dt / 1000);
         this.forces = {};
@@ -125,7 +127,9 @@ export class RigidBody extends Collidable {
         }
         return { position, velocity, omega };
     }
-    getKE = () => (this.mass * this.velocity.getSqMag()) / 2 + (this.inertia * sq(this.omega)) / 2;
+    getME() {
+        return (this.mass * this.velocity.getSqMag() + this.inertia * sq(this.omega)) / 2;
+    }
 }
 export class Immovable extends RigidBody {
     mass = Infinity;
@@ -141,7 +145,7 @@ export class Immovable extends RigidBody {
             draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));
         return { position: this.position, velocity: this.velocity, omega: this.omega };
     }
-    getKE = () => 0;
+    getME = () => 0;
 }
 export class Bounded extends RigidBody {
     tether;
@@ -158,8 +162,11 @@ export class Bounded extends RigidBody {
     update(dt) {
         const dir = this.tether.subtract(this.position).normalize();
         const distance = this.tether.subtract(this.position).getMag();
-        this.velocity = this.velocity.add(dir.scale((distance * this.springConstant) / this.mass));
+        this.forces["spring"] = dir.scale(distance * this.springConstant);
         super.update(dt);
     }
-    getKE = () => 0;
+    getME() {
+        const distSq = this.tether.subtract(this.position).getSqMag();
+        return super.getME() + 0.5 * this.springConstant * distSq;
+    }
 }

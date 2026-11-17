@@ -85,7 +85,7 @@ const shape = new Polygon(
   polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight),
   color
 )
-boxes.push(new Bounded(new RigidBody(new Vector(0, 100), 0, shape), new Vector(0, 0), 1))
+boxes.push(new Bounded(new RigidBody(new Vector(0, 100), 0, shape), new Vector(0, 0), 50))
 import { PerformanceProfile } from "./Utils/profiler.js"
 
 const Perf = new PerformanceProfile(
@@ -111,7 +111,7 @@ for (const client of boxes) {
 }
 
 const collisionSet = new Set()
-let KE = 0
+let ME = 0
 
 let lastTime = 0
 function drawLoop(timestamp: number) {
@@ -125,7 +125,7 @@ function drawLoop(timestamp: number) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  KE = 0
+  ME = 0
   Perf.resetMetrics()
   collisionSet.clear()
   collisions = []
@@ -139,7 +139,7 @@ function drawLoop(timestamp: number) {
 
   for (const box of boxes) {
     if (box instanceof RigidBody) {
-      KE += box.getKE()
+      ME += box.getME()
       box.update(dt)
       box.getInput()
     }
@@ -240,7 +240,7 @@ function drawLoop(timestamp: number) {
     "SAT Calls": collisionChecks,
     "Object Count": boxes.length,
     "Collision Count": collisions.length,
-    "Kinetic Energy": KE.toFixed(3),
+    "Mechanical Energy": ME.toFixed(3),
   }
 
   ctx.font = "bold 24px Arial"
