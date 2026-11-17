@@ -50,7 +50,7 @@ export class RigidBody extends Collidable {
         this.forces = {};
         this.torques = {};
     }
-    getInput() {
+    getInput(_dt) {
         if (focus !== this.id)
             return;
         if (Settings.cameraTrack && cam.target !== this)
@@ -59,7 +59,7 @@ export class RigidBody extends Collidable {
         const inputY = +keys.s - +keys.w;
         const inputDir = +keys.e - +keys.q;
         this.forces["input"] = new Vector(inputX, inputY).normalize().scale(500 * this.mass);
-        this.torques["input"] = inputDir / 300;
+        this.torques["input"] = inputDir * 10 * this.inertia;
     }
     update(dt) {
         const friction = this.velocity
@@ -140,6 +140,17 @@ export class Immovable extends RigidBody {
         for (const contact of data.contacts)
             draw.ellipse(contact.x, contact.y, 25, 25, rgba(100, 50));
         return { position: this.position, velocity: this.velocity, omega: this.omega };
+    }
+    getInput(dt) {
+        if (focus !== this.id)
+            return;
+        if (Settings.cameraTrack && cam.target !== this)
+            cam.target = this;
+        const inputX = +keys.d - +keys.a;
+        const inputY = +keys.s - +keys.w;
+        const inputDir = +keys.e - +keys.q;
+        this.velocity = this.velocity.add(new Vector(inputX, inputY).normalize().scale((500 * dt) / 1000));
+        this.omega += (inputDir * 10 * dt) / 1000;
     }
     getME = () => 0;
 }

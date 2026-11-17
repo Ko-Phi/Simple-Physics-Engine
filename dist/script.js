@@ -32,11 +32,8 @@ const Perf = new PerformanceProfile("boxUpdate", "aabbUpdate", "gridUpdate", "gr
 let ticksSinceInput = 0;
 let ticks = 0;
 let collisions = [];
-for (const client of boxes) {
-    if (client instanceof RigidBody)
-        client.getInput();
+for (const client of boxes)
     world.newClient(client);
-}
 const collisionSet = new Set();
 let ME = 0;
 let lastTime = 0;
@@ -45,8 +42,8 @@ function drawLoop(timestamp) {
         throw "e";
     ctx.resetTransform();
     //let dt = timestamp - lastTime
-    let dt = Settings.period;
     lastTime = timestamp;
+    let dt = Settings.period;
     if (isNaN(dt))
         dt = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -63,7 +60,7 @@ function drawLoop(timestamp) {
         if (box instanceof RigidBody) {
             ME += box.getME();
             box.update(dt);
-            box.getInput();
+            box.getInput(dt);
         }
         Perf.updateMetric("boxUpdate");
         box.hitbox.shallowUpdate(box.position, box.dir);

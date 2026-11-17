@@ -105,10 +105,7 @@ let ticksSinceInput = 0
 let ticks = 0
 let collisions = []
 
-for (const client of boxes) {
-  if (client instanceof RigidBody) client.getInput()
-  world.newClient(client)
-}
+for (const client of boxes) world.newClient(client)
 
 const collisionSet = new Set()
 let ME = 0
@@ -119,8 +116,8 @@ function drawLoop(timestamp: number) {
   ctx.resetTransform()
 
   //let dt = timestamp - lastTime
-  let dt = Settings.period
   lastTime = timestamp
+  let dt = Settings.period
   if (isNaN(dt)) dt = 0
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -141,7 +138,7 @@ function drawLoop(timestamp: number) {
     if (box instanceof RigidBody) {
       ME += box.getME()
       box.update(dt)
-      box.getInput()
+      box.getInput(dt)
     }
     Perf.updateMetric("boxUpdate")
     box.hitbox.shallowUpdate(box.position, box.dir)
