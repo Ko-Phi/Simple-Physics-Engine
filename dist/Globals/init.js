@@ -8,6 +8,7 @@ if (ctx === null)
 export const draw = new Draw(ctx);
 export const [width, height] = [canvas.width, canvas.height];
 export const [halfWidth, halfHeight] = [width / 2, height / 2];
+export const [worldWidth, worldHeight] = [width, height].map((x) => x * 2);
 let idCount = 0;
 export const newid = () => idCount++;
 export let focus = NaN;

@@ -7,7 +7,7 @@ export const allCircles = false; // all shapes are circles. Increases performanc
 export const allPolys = false; // all shapes are polygons. Slightly more performance intensive
 export const gridSize = 100; // influences hashgrid check. Can queak for minor performance improvement
 // Box Count
-export const insertCount = 100;
+export const insertCount = 300;
 export const scale = 20;
 export const scaleVariance = 0;
 // Visuals

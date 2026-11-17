@@ -1,5 +1,14 @@
 import { keys } from "../../Globals/input.js"
-import { outline, focus, draw, ctx, newid, halfWidth, halfHeight, cam } from "../../Globals/init.js"
+import {
+  outline,
+  focus,
+  draw,
+  ctx,
+  newid,
+  cam,
+  worldWidth,
+  worldHeight,
+} from "../../Globals/init.js"
 import * as Settings from "../../Globals/settings.js"
 import { Vector, random, sq, rgba, hsva } from "../../Utils/math.js"
 import { zipShift } from "../../Utils/arrays.js"
@@ -94,10 +103,12 @@ export class RigidBody
 
     this.ticks++
     if (Settings.boundedWorld) {
-      if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2)
-        this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2)
-      if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2)
-        this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2)
+      if (Math.abs(this.position.x) > worldWidth / 2 + this.hitbox.aabb.width / 2)
+        this.position.x =
+          -Math.sign(this.position.x) * (worldWidth / 2 + this.hitbox.aabb.width / 2)
+      if (Math.abs(this.position.y) > worldHeight / 2 + this.hitbox.aabb.height / 2)
+        this.position.y =
+          -Math.sign(this.position.y) * (worldHeight / 2 + this.hitbox.aabb.width / 2)
     }
 
     this.velocity = this.velocity.add(

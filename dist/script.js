@@ -1,6 +1,6 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { keys, mouse } from "./Globals/input.js";
-import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, setFocus, } from "./Globals/init.js";
+import { cam, canvas, draw, ctx, width, height, halfHeight, halfWidth, setFocus, worldWidth, worldHeight, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Physics/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
@@ -18,7 +18,7 @@ for (let i = 0; i < Settings.insertCount; i++) {
         let hHeight = Settings.scale * random(1 - Settings.scaleVariance, 1 + Settings.scaleVariance) * 0.5;
         shape = new Polygon(polyVerts(-hWidth, -hHeight, hWidth, -hHeight, hWidth, hHeight, -hWidth, hHeight), color);
     }
-    boxes.push(new factory(new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)), random(0, 2 * Math.PI), shape));
+    boxes.push(new factory(new Vector(random(-worldWidth, worldWidth) / 2, random(-worldHeight, worldHeight) / 2), random(0, 2 * Math.PI), shape));
 }
 if (Settings.insertCount === 0)
     boxes.push(new RigidBody(new Vector(-100, 0), 0, new Circle(20, rgba(255, 0, 0)), new Vector(1, 0)), new RigidBody(new Vector(100, 0), 0, new Circle(100, rgba(255, 0, 0))), new RigidBody(new Vector(0, -100), 0, new Circle(35, rgba(255, 0, 0))), new RigidBody(new Vector(0, 100), 1.5, new Polygon(regularPolyVerts(0, 0, 35, 5), rgba(255, 0, 0))), new RigidBody(new Vector(0, 200), 1.2, new Polygon(polyVerts(-25, -50, 25, -50, 25, 50, -25, 50), rgba(255, 0, 0))));
@@ -52,7 +52,7 @@ function drawLoop(timestamp) {
     collisionSet.clear();
     collisions = [];
     world.cellsChecked = 0;
-    draw.rect(0, 0, width, height, "#ffffff");
+    draw.rect(0, 0, width, height, "#404040");
     ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y);
     world.draw();
     Perf.getTime();
@@ -142,7 +142,7 @@ function drawLoop(timestamp) {
     Perf.updateMetric("handleCollisions");
     Perf.getTotal();
     ctx.resetTransform();
-    const totalCells = (halfWidth * 2 * (halfHeight * 2)) / Settings.gridSize ** 2;
+    const totalCells = (worldWidth * worldHeight) / Settings.gridSize ** 2;
     const countMetrics = {
         "Cells Filled": world.grid.size + " / " + totalCells,
         "Cells Checked": world.cellsChecked + " / " + totalCells,

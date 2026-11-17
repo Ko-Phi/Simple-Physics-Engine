@@ -1,4 +1,14 @@
-import { cam, ctx, draw } from "../../Globals/init.js"
+import {
+  cam,
+  ctx,
+  draw,
+  halfHeight,
+  halfWidth,
+  height,
+  width,
+  worldHeight,
+  worldWidth,
+} from "../../Globals/init.js"
 import { displayGridCheck } from "../../Globals/settings.js"
 import { Collidable } from "./collisions.js"
 import { Vector, rgba } from "../../Utils/math.js"
@@ -105,6 +115,11 @@ export class SpatialHashGrid {
     }
   }
   draw() {
+    ctx.save()
+    ctx.resetTransform()
+    draw.ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y)
+    draw.rect(-worldWidth / 2, -worldHeight / 2, worldWidth, worldHeight, "#ffffff")
+    ctx.restore()
     ctx.save()
     ctx.resetTransform()
     draw.ctx.translate(

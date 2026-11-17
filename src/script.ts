@@ -11,6 +11,8 @@ import {
   halfHeight,
   halfWidth,
   setFocus,
+  worldWidth,
+  worldHeight,
 } from "./Globals/init.js"
 
 import * as Settings from "./Globals/settings.js"
@@ -54,7 +56,7 @@ for (let i = 0; i < Settings.insertCount; i++) {
   }
   boxes.push(
     new factory(
-      new Vector(random(-halfWidth, halfWidth), random(-halfHeight, halfHeight)),
+      new Vector(random(-worldWidth, worldWidth) / 2, random(-worldHeight, worldHeight) / 2),
       random(0, 2 * Math.PI),
       shape
     )
@@ -127,7 +129,7 @@ function drawLoop(timestamp: number) {
   collisionSet.clear()
   collisions = []
   world.cellsChecked = 0
-  draw.rect(0, 0, width, height, "#ffffff")
+  draw.rect(0, 0, width, height, "#404040")
 
   ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y)
   world.draw()
@@ -230,7 +232,7 @@ function drawLoop(timestamp: number) {
 
   ctx.resetTransform()
 
-  const totalCells = (halfWidth * 2 * (halfHeight * 2)) / Settings.gridSize ** 2
+  const totalCells = (worldWidth * worldHeight) / Settings.gridSize ** 2
   const countMetrics: Record<string, string | number> = {
     "Cells Filled": world.grid.size + " / " + totalCells,
     "Cells Checked": world.cellsChecked + " / " + totalCells,

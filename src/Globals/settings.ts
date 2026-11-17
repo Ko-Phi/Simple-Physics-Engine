@@ -10,7 +10,7 @@ export const allPolys = false // all shapes are polygons. Slightly more performa
 export const gridSize = 100 // influences hashgrid check. Can queak for minor performance improvement
 
 // Box Count
-export const insertCount: number = 100
+export const insertCount: number = 300
 export const scale = 20
 export const scaleVariance = 0
 
