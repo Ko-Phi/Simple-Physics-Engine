@@ -88,14 +88,18 @@ export class RigidBody
     this.torques["input"] = inputDir * 10 * this.inertia
   }
   update(dt: number) {
+    const divisor = dt / 1000
     const friction = this.velocity
       .normalize()
-      .scale(-Math.min(Settings.mu, this.velocity.getMag()) * this.mass)
+      .scale(-Math.min(Settings.mu * this.mass, (this.mass * this.velocity.getMag()) / divisor))
     this.forces["friction"] = this instanceof Immovable ? new Vector(0, 0) : friction
 
     let torque =
       -Math.sign(this.omega) *
-      Math.min(Settings.mu * this.hitbox.radius * this.mass, Math.abs(this.omega) * this.inertia)
+      Math.min(
+        Settings.mu * this.hitbox.radius * this.mass,
+        (Math.abs(this.omega) * this.inertia) / divisor
+      )
     this.torques["friction"] = this instanceof Immovable ? 0 : torque
 
     if (focus !== this.id) this.sprite.shapes[0].color = this.trueColor

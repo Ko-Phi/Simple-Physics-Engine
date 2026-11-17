@@ -4,8 +4,6 @@ import {
   draw,
   halfHeight,
   halfWidth,
-  height,
-  width,
   worldHeight,
   worldWidth,
 } from "../../Globals/init.js"
