@@ -15,6 +15,8 @@ export class RigidBody extends Collidable {
     velocity;
     omega;
     trueColor;
+    forces;
+    torques;
     ticks;
     constructor(position, dir, shape, velocity, rho = 1e-3) {
         const hitbox = shape instanceof Polygon
@@ -45,6 +47,8 @@ export class RigidBody extends Collidable {
                 new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
         this.omega = random(-0.15, 0.15) * Settings.velocityMagnitude;
         this.ticks = Math.floor(random(0, 50));
+        this.forces = {};
+        this.torques = {};
     }
     getInput() {
         if (focus !== this.id)
@@ -54,31 +58,17 @@ export class RigidBody extends Collidable {
         const input_x = +keys.d - +keys.a;
         const input_y = +keys.s - +keys.w;
         const input_dir = +keys.e - +keys.q;
-        const translation = new Vector(input_x, input_y).normalize();
-        this.velocity = this.velocity.add(translation.scale(10));
+        this.forces["input"] = new Vector(input_x, input_y).normalize().scale(10 * this.mass);
         this.omega += input_dir / 10;
     }
     update(dt) {
-        this.ticks++;
-        this.position = this.position.add(this.velocity.scale(dt / 1000));
-        this.dir += this.omega * (dt / 1000);
-        const velocity = this.velocity.getMag();
-        if (velocity > Settings.mu)
-            this.velocity = this.velocity.subtract(this.velocity.scale(Settings.mu / velocity));
-        else
-            this.velocity = new Vector(0, 0);
-        let torque = this instanceof Immovable ? 0 : (Settings.mu * this.hitbox.radius * this.mass) / this.inertia;
-        if (Math.abs(this.omega) > torque) {
-            this.omega -= Math.sign(this.omega) * torque;
-        }
-        else
-            this.omega = 0;
-        if (Settings.boundedWorld) {
-            if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2)
-                this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2);
-            if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2)
-                this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2);
-        }
+        const friction = this.velocity
+            .normalize()
+            .scale(-Math.min(Settings.mu, this.velocity.getMag()) * this.mass);
+        this.forces["friction"] = this instanceof Immovable ? new Vector(0, 0) : friction;
+        let torque = -Math.sign(this.omega) *
+            Math.min(Settings.mu * this.hitbox.radius * this.mass, Math.abs(this.omega) * this.inertia);
+        this.torques["friction"] = this instanceof Immovable ? 0 : torque;
         if (this.ticks % (60 * dt) === 0 && Settings.periodicVelocityShifts) {
             this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
             this.omega = random(-0.01, 0.01) * Settings.scale;
@@ -87,6 +77,21 @@ export class RigidBody extends Collidable {
             this.sprite.shapes[0].color = this.trueColor;
         else
             this.sprite.shapes[0].color = rgba(150, 200, 150);
+        this.ticks++;
+        if (Settings.boundedWorld) {
+            if (Math.abs(this.position.x) > halfWidth + this.hitbox.aabb.width / 2)
+                this.position.x = -Math.sign(this.position.x) * (halfWidth + this.hitbox.aabb.width / 2);
+            if (Math.abs(this.position.y) > halfHeight + this.hitbox.aabb.height / 2)
+                this.position.y = -Math.sign(this.position.y) * (halfHeight + this.hitbox.aabb.width / 2);
+        }
+        this.velocity = this.velocity.add(Object.values(this.forces)
+            .reduce((acc, curr) => acc.add(curr), new Vector(0, 0))
+            .divide(this.mass));
+        this.omega += Object.values(this.torques).reduce((acc, curr) => acc + curr, 0) / this.inertia;
+        this.position = this.position.add(this.velocity.scale(dt / 1000));
+        this.dir += this.omega * (dt / 1000);
+        this.forces = {};
+        this.torques = {};
     }
     draw() {
         ctx.save();
@@ -156,7 +161,5 @@ export class Bounded extends RigidBody {
         this.velocity = this.velocity.add(dir.scale((distance * this.springConstant) / this.mass));
         super.update(dt);
     }
-    getKE = () => (this.mass * this.velocity.getSqMag()) / 2 +
-        (this.inertia * sq(this.omega)) / 2 +
-        (this.tether.subtract(this.position).getSqMag() * this.springConstant) / 2;
+    getKE = () => 0;
 }
