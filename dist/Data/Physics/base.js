@@ -69,10 +69,6 @@ export class RigidBody extends Collidable {
         let torque = -Math.sign(this.omega) *
             Math.min(Settings.mu * this.hitbox.radius * this.mass, Math.abs(this.omega) * this.inertia);
         this.torques["friction"] = this instanceof Immovable ? 0 : torque;
-        if (this.ticks % (60 * dt) === 0 && Settings.periodicVelocityShifts) {
-            this.velocity = new Vector(random(0, 2 * Math.PI), Settings.velocityMagnitude * random(0.75, 1.25), "dirMag");
-            this.omega = random(-0.01, 0.01) * Settings.scale;
-        }
         if (focus !== this.id)
             this.sprite.shapes[0].color = this.trueColor;
         else

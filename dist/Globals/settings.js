@@ -1,5 +1,4 @@
 export const period = 1000 / 60;
-export const periodicVelocityShifts = false; // velocity randomized periodically
 export const velocityMagnitude = 200; // alters the magnitude of said velocity
 export const restitution = 0.5; // collision bounciness. Values < 1 yield loss of energy. Values > 1 break the first law of thermodynamics
 export const mu = 30; // add friction (should be quite small)
