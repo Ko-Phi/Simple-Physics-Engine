@@ -33,17 +33,16 @@ abstract class AShape {
 }
 
 export class Polygon implements AShape {
-  readonly type: ShapeType
+  readonly type: ShapeType = "Polygon"
   readonly radius: number
-  readonly vertices: Vector[]
   readonly area: number
   readonly windingOrder: WindingOrder
   centroid: Vector
-  color: string
-  constructor(vertices: Vector[], color: string = rgba(0, 0, 0, 0), centroid?: Vector) {
-    this.type = "Polygon"
-    this.vertices = vertices
-    this.color = color
+  constructor(
+    public vertices: Vector[],
+    public color: string = rgba(0, 0, 0, 0),
+    centroid?: Vector
+  ) {
     this.centroid =
       centroid ??
       this.vertices
@@ -55,12 +54,12 @@ export class Polygon implements AShape {
         -Infinity
       )
     )
-    this.area = zipShift(this.vertices).reduce(
+    const halfArea = zipShift(this.vertices).reduce(
       (area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex),
       0
     )
-    this.windingOrder = this.area < 0 ? "CW" : "CCW"
-    this.area = Math.abs(this.area) / 2
+    this.windingOrder = halfArea < 0 ? "CW" : "CCW"
+    this.area = Math.abs(halfArea) / 2
   }
   draw(dx: number, dy: number, dir: number) {
     ctx.save()
@@ -72,20 +71,13 @@ export class Polygon implements AShape {
 }
 
 export class Circle implements AShape {
-  readonly type: ShapeType
-  readonly radius: number
+  readonly type: ShapeType = "Circle"
   readonly area: number
-  centroid: Vector
-  color: string
   constructor(
-    radius: number,
-    color: string = rgba(0, 0, 0, 0),
-    centroid: Vector = new Vector(0, 0)
+    readonly radius: number,
+    public color: string = rgba(0, 0, 0, 0),
+    public centroid: Vector = new Vector(0, 0)
   ) {
-    this.type = "Circle"
-    this.centroid = centroid
-    this.radius = radius
-    this.color = color
     this.area = Math.PI * sq(this.radius)
   }
   draw(dx: number, dy: number, θ: number) {

@@ -29,7 +29,6 @@ export class RigidBody
     CollisionHandler<RigidBody, RigidBody, { position: Vector; velocity: Vector; omega: number }>
 {
   readonly id: number
-  readonly rho: number
   readonly mass: number
   readonly inertia: number
   readonly sprite: Sprite
@@ -40,7 +39,13 @@ export class RigidBody
   torques: Record<string, number>
 
   ticks: number
-  constructor(position: Vector, dir: number, shape: Shape, velocity?: Vector, rho: number = 1e-3) {
+  constructor(
+    position: Vector,
+    dir: number,
+    shape: Shape,
+    velocity?: Vector,
+    readonly rho: number = 1e-3
+  ) {
     const hitbox =
       shape instanceof Polygon
         ? new PolygonHitbox(shape, position, dir)
@@ -50,7 +55,6 @@ export class RigidBody
     this.sprite = new Sprite([shape])
     this.trueColor = hsva(random(-15, 40), 0.6, 1)
 
-    this.rho = rho
     this.mass = this.hitbox.area * this.rho
     if (this.hitbox.type === "Circle") {
       this.inertia = 0.5 * this.mass * sq(this.hitbox.radius)
@@ -198,12 +202,12 @@ export class Immovable extends RigidBody {
   getME = () => 0
 }
 export class Bounded extends RigidBody {
-  readonly tether: Vector
-  readonly springConstant: number
-  constructor(base: RigidBody, tether: Vector, springConstant: number) {
+  constructor(
+    base: RigidBody,
+    readonly tether: Vector,
+    readonly springConstant: number
+  ) {
     super(base.position, base.dir, base.hitbox, base.velocity, base.rho)
-    this.tether = tether
-    this.springConstant = springConstant
   }
   draw() {
     super.draw()

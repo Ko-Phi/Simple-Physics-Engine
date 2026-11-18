@@ -1,18 +1,15 @@
-import { cam, ctx, draw, halfHeight, halfWidth, worldHeight, worldWidth, } from "../../Globals/init.js";
+import { cam, ctx, draw, height, width, worldHeight, worldWidth } from "../../Globals/init.js";
 import { displayGridCheck } from "../../Globals/settings.js";
 import { Vector, rgba } from "../../Utils/math.js";
 export class SpatialHashGrid {
-    cellsChecked;
-    grid;
-    dimensions;
     cellSize;
-    queryIds;
+    dimensions;
+    grid = new Map();
+    queryIds = 0;
+    cellsChecked = 0;
     constructor(cellSize, dimensions) {
-        this.grid = new Map();
-        this.dimensions = dimensions;
         this.cellSize = cellSize;
-        this.queryIds = 0;
-        this.cellsChecked = 0;
+        this.dimensions = dimensions;
     }
     key = (x, y) => x + "," + y;
     getIndex = (x, y) => new Vector(...[x, y].map((c) => Math.floor(c / this.cellSize)));
@@ -102,7 +99,7 @@ export class SpatialHashGrid {
     draw() {
         ctx.save();
         ctx.resetTransform();
-        draw.ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y);
+        draw.ctx.translate(width / 2 - cam.position.x, height / 2 - cam.position.y);
         draw.rect(-worldWidth / 2, -worldHeight / 2, worldWidth, worldHeight, "#ffffff");
         ctx.restore();
         ctx.save();

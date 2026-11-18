@@ -17,12 +17,11 @@ export type Collision<A extends Collidable, B extends Collidable> = Intersection
 type Seperation = false
 
 export class Aabb {
-  width: number
-  height: number
-  centroid: Vector
-  constructor(width: number, height: number, centroid: Vector) {
-    ;[this.width, this.height, this.centroid] = [width, height, centroid]
-  }
+  constructor(
+    public width: number,
+    public height: number,
+    public centroid: Vector
+  ) {}
   draw(position: Vector) {
     ctx.save()
     ctx.translate(this.centroid.x + position.x, this.centroid.y + position.y)
@@ -128,14 +127,12 @@ export class CircleHitbox extends Circle implements AHitbox {
 
 export class Collidable {
   indices: Vector[]
-  position: Vector
-  dir: number
-  readonly hitbox: Hitbox
-  constructor(hitbox: Hitbox, position: Vector, dir: number) {
+  constructor(
+    readonly hitbox: Hitbox,
+    public position: Vector,
+    public dir: number
+  ) {
     this.indices = []
-    this.hitbox = hitbox
-    this.position = position
-    this.dir = dir
   }
   checkCollision<B extends Collidable>(refB: B): Collision<typeof this, B> | Seperation {
     const refA = this

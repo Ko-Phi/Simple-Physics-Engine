@@ -8,8 +8,9 @@ export class Aabb {
     height;
     centroid;
     constructor(width, height, centroid) {
-        ;
-        [this.width, this.height, this.centroid] = [width, height, centroid];
+        this.width = width;
+        this.height = height;
+        this.centroid = centroid;
     }
     draw(position) {
         ctx.save();
@@ -98,15 +99,15 @@ export class CircleHitbox extends Circle {
     }
 }
 export class Collidable {
-    indices;
+    hitbox;
     position;
     dir;
-    hitbox;
+    indices;
     constructor(hitbox, position, dir) {
-        this.indices = [];
         this.hitbox = hitbox;
         this.position = position;
         this.dir = dir;
+        this.indices = [];
     }
     checkCollision(refB) {
         const refA = this;

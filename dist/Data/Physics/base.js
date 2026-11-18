@@ -7,8 +7,8 @@ import { Polygon } from ".././shape.js";
 import { Sprite } from ".././sprite.js";
 import { Collidable, CircleHitbox, PolygonHitbox, isPolygonHitbox, } from "./collisions.js";
 export class RigidBody extends Collidable {
-    id;
     rho;
+    id;
     mass;
     inertia;
     sprite;
@@ -23,10 +23,10 @@ export class RigidBody extends Collidable {
             ? new PolygonHitbox(shape, position, dir)
             : new CircleHitbox(shape, position, dir);
         super(hitbox, position, dir);
+        this.rho = rho;
         this.id = newid();
         this.sprite = new Sprite([shape]);
         this.trueColor = hsva(random(-15, 40), 0.6, 1);
-        this.rho = rho;
         this.mass = this.hitbox.area * this.rho;
         if (this.hitbox.type === "Circle") {
             this.inertia = 0.5 * this.mass * sq(this.hitbox.radius);

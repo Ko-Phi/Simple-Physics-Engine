@@ -16,15 +16,14 @@ export function polyVerts(...inputs) {
 class AShape {
 }
 export class Polygon {
-    type;
-    radius;
     vertices;
+    color;
+    type = "Polygon";
+    radius;
     area;
     windingOrder;
     centroid;
-    color;
     constructor(vertices, color = rgba(0, 0, 0, 0), centroid) {
-        this.type = "Polygon";
         this.vertices = vertices;
         this.color = color;
         this.centroid =
@@ -33,9 +32,9 @@ export class Polygon {
                     .reduce((sum, vertex) => sum.add(vertex), new Vector(0, 0))
                     .divide(this.vertices.length);
         this.radius = Math.sqrt(this.vertices.reduce((maxSqRadius, vertex) => Math.max(vertex.subtract(this.centroid).getSqMag(), maxSqRadius), -Infinity));
-        this.area = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0);
-        this.windingOrder = this.area < 0 ? "CW" : "CCW";
-        this.area = Math.abs(this.area) / 2;
+        const halfArea = zipShift(this.vertices).reduce((area, [vertex, nextVertex]) => area + vertex.crossProduct(nextVertex), 0);
+        this.windingOrder = halfArea < 0 ? "CW" : "CCW";
+        this.area = Math.abs(halfArea) / 2;
     }
     draw(dx, dy, dir) {
         ctx.save();
@@ -46,16 +45,15 @@ export class Polygon {
     }
 }
 export class Circle {
-    type;
     radius;
-    area;
-    centroid;
     color;
+    centroid;
+    type = "Circle";
+    area;
     constructor(radius, color = rgba(0, 0, 0, 0), centroid = new Vector(0, 0)) {
-        this.type = "Circle";
-        this.centroid = centroid;
         this.radius = radius;
         this.color = color;
+        this.centroid = centroid;
         this.area = Math.PI * sq(this.radius);
     }
     draw(dx, dy, θ) {
