@@ -1,5 +1,5 @@
 import { Vector } from "../Utils/math.js"
-import { canvas, halfWidth, halfHeight } from "./init.js"
+import { canvas } from "./init.js"
 
 interface Keys {
   [indexParameterName: string]: boolean
@@ -26,8 +26,8 @@ export const mouse = { position: new Vector(0, 0), isDown: false }
 function getMousePos(canvas: HTMLCanvasElement, { clientX, clientY }: MouseEvent) {
   const { left, top, width, height } = canvas.getBoundingClientRect()
   return new Vector(
-    ((clientX - left) * canvas.width) / width - halfWidth,
-    ((clientY - top) * canvas.height) / height - halfHeight
+    ((clientX - left) * canvas.width) / width - canvas.width / 2,
+    ((clientY - top) * canvas.height) / height - canvas.height / 2
   )
 }
 canvas.addEventListener("mousemove", (event) => {

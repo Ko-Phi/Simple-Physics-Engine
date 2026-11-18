@@ -1,5 +1,5 @@
 import { Vector } from "../Utils/math.js";
-import { canvas, halfWidth, halfHeight } from "./init.js";
+import { canvas } from "./init.js";
 export const keys = {
     ArrowUp: false,
 };
@@ -21,7 +21,7 @@ window.addEventListener("keyup", (event) => {
 export const mouse = { position: new Vector(0, 0), isDown: false };
 function getMousePos(canvas, { clientX, clientY }) {
     const { left, top, width, height } = canvas.getBoundingClientRect();
-    return new Vector(((clientX - left) * canvas.width) / width - halfWidth, ((clientY - top) * canvas.height) / height - halfHeight);
+    return new Vector(((clientX - left) * canvas.width) / width - canvas.width / 2, ((clientY - top) * canvas.height) / height - canvas.height / 2);
 }
 canvas.addEventListener("mousemove", (event) => {
     const pos = getMousePos(canvas, event);

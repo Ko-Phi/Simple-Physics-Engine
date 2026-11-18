@@ -1,19 +1,7 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js"
 import { keys, mouse } from "./Globals/input.js"
 
-import {
-  cam,
-  canvas,
-  draw,
-  ctx,
-  width,
-  height,
-  halfHeight,
-  halfWidth,
-  setFocus,
-  worldWidth,
-  worldHeight,
-} from "./Globals/init.js"
+import { cam, draw, ctx, width, height, setFocus, worldWidth, worldHeight } from "./Globals/init.js"
 
 import * as Settings from "./Globals/settings.js"
 
@@ -122,7 +110,7 @@ function drawLoop(timestamp: number) {
   let dt = Settings.period
   if (isNaN(dt)) dt = 0
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.clearRect(0, 0, width, height)
 
   ME = 0
   Perf.resetMetrics()
@@ -131,7 +119,7 @@ function drawLoop(timestamp: number) {
   world.cellsChecked = 0
   draw.rect(0, 0, width, height, "#404040")
 
-  ctx.translate(halfWidth - cam.position.x, halfHeight - cam.position.y)
+  ctx.translate(width / 2 - cam.position.x, height / 2 - cam.position.y)
   world.draw()
 
   Perf.getTime()

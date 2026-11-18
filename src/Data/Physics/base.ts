@@ -92,20 +92,6 @@ export class RigidBody
     this.torques["input"] = inputDir * 10 * this.inertia
   }
   update(dt: number) {
-    const divisor = dt / 1000
-    const friction = this.velocity
-      .normalize()
-      .scale(-Math.min(Settings.mu * this.mass, (this.mass * this.velocity.getMag()) / divisor))
-    this.forces["friction"] = this instanceof Immovable ? new Vector(0, 0) : friction
-
-    let torque =
-      -Math.sign(this.omega) *
-      Math.min(
-        Settings.mu * this.hitbox.radius * this.mass,
-        (Math.abs(this.omega) * this.inertia) / divisor
-      )
-    this.torques["friction"] = this instanceof Immovable ? 0 : torque
-
     if (focus !== this.id) this.sprite.shapes[0].color = this.trueColor
     else this.sprite.shapes[0].color = rgba(150, 200, 150)
 
@@ -119,6 +105,27 @@ export class RigidBody
           -Math.sign(this.position.y) * (worldHeight / 2 + this.hitbox.aabb.width / 2)
     }
 
+    this.applyForces(dt)
+
+    const divisor = dt / 1000
+    const friction = this.velocity
+      .normalize()
+      .scale(-Math.min(Settings.mu * this.mass, (this.mass * this.velocity.getMag()) / divisor))
+    const torque =
+      -Math.sign(this.omega) *
+      Math.min(
+        Settings.mu * this.hitbox.radius * this.mass,
+        (Math.abs(this.omega) * this.inertia) / divisor
+      )
+    this.forces["friction"] = this instanceof Immovable ? new Vector(0, 0) : friction
+    this.torques["friction"] = this instanceof Immovable ? 0 : torque
+
+    this.applyForces(dt)
+
+    this.position = this.position.add(this.velocity.scale(dt / 1000))
+    this.dir += this.omega * (dt / 1000)
+  }
+  applyForces(dt: number) {
     this.velocity = this.velocity.add(
       Object.values(this.forces)
         .reduce((acc, curr) => acc.add(curr), new Vector(0, 0))
@@ -128,8 +135,6 @@ export class RigidBody
       (Object.values(this.torques).reduce((acc, curr) => acc + curr, 0) * (dt / 1000)) /
       this.inertia
 
-    this.position = this.position.add(this.velocity.scale(dt / 1000))
-    this.dir += this.omega * (dt / 1000)
     this.forces = {}
     this.torques = {}
   }
