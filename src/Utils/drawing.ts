@@ -60,13 +60,16 @@ export class Draw {
     str: string,
     x: number,
     y: number,
+    font: string = "bold 24px Arial",
     align: CanvasTextAlign = "left",
     baseline: CanvasTextBaseline = "top",
     fill: string = "#ffffff",
     weight?: number,
     stroke?: string
   ) {
-    ;((this.ctx.textAlign = align), (this.ctx.textBaseline = baseline))
+    this.ctx.textAlign = align
+    this.ctx.font = font
+    this.ctx.textBaseline = baseline
     this.setSettings(fill, weight, stroke)
     this.ctx.fillText(str, x, y)
   }

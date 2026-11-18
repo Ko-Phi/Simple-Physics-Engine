@@ -39,9 +39,10 @@ export class Draw {
         this.ctx.fill();
         this.ctx.stroke();
     }
-    text(str, x, y, align = "left", baseline = "top", fill = "#ffffff", weight, stroke) {
-        ;
-        ((this.ctx.textAlign = align), (this.ctx.textBaseline = baseline));
+    text(str, x, y, font = "bold 24px Arial", align = "left", baseline = "top", fill = "#ffffff", weight, stroke) {
+        this.ctx.textAlign = align;
+        this.ctx.font = font;
+        this.ctx.textBaseline = baseline;
         this.setSettings(fill, weight, stroke);
         this.ctx.fillText(str, x, y);
     }

@@ -77,6 +77,7 @@ const shape = new Polygon(
 )
 boxes.push(new Bounded(new RigidBody(new Vector(0, 100), 0, shape), new Vector(0, 0), 50))
 import { PerformanceProfile } from "./Utils/profiler.js"
+import { UIContainer, UIText } from "./Utils/ui.js"
 
 const Perf = new PerformanceProfile(
   "boxUpdate",
@@ -98,7 +99,10 @@ let collisions = []
 for (const client of boxes) world.newClient(client)
 
 const collisionSet = new Set()
+let collisionChecks = 0
 let ME = 0
+
+const totalCells = (worldWidth * worldHeight) / Settings.gridSize ** 2
 
 let lastTime = 0
 function drawLoop(timestamp: number) {
@@ -113,6 +117,7 @@ function drawLoop(timestamp: number) {
   ctx.clearRect(0, 0, width, height)
 
   ME = 0
+  collisionChecks = 0
   Perf.resetMetrics()
   collisionSet.clear()
   collisions = []
@@ -158,7 +163,6 @@ function drawLoop(timestamp: number) {
   cam.update()
 
   // check collisions
-  let collisionChecks = 0
   for (const box of boxes) {
     const aabb = box.hitbox.aabb
     Perf.getTime()
@@ -219,9 +223,12 @@ function drawLoop(timestamp: number) {
   Perf.getTotal()
 
   ctx.resetTransform()
+  if (ticks % 60 === 0) Perf.updateMetrics()
+  Perf.draw(["average", "max", "percentage"], dt)
 
-  const totalCells = (worldWidth * worldHeight) / Settings.gridSize ** 2
-  const countMetrics: Record<string, string | number> = {
+  draw.text("", 0, 0)
+  ctx.resetTransform()
+  let countMetrics: Record<string, string | number> = {
     "Cells Filled": world.grid.size + " / " + totalCells,
     "Cells Checked": world.cellsChecked + " / " + totalCells,
     "SAT Calls": collisionChecks,
@@ -229,42 +236,41 @@ function drawLoop(timestamp: number) {
     "Collision Count": collisions.length,
     "Mechanical Energy": ME.toFixed(3),
   }
-
-  ctx.font = "bold 24px Arial"
-  const margin = 4
-  const padding = 8
-
-  const dataWidth = 140
-  const keyWidth = 210
-  const columnGap = 16
-
-  //const rowHeight = textAscent() * 2
-  const rowHeight = 15 * 2
-  const rowGap = 0
-  const start = margin + padding
-
-  if (ticks % 60 === 0) Perf.updateMetrics()
-  Perf.draw(["average", "max", "percentage"], dt)
-
-  const counterDisplayHeight =
-    padding + Object.keys(countMetrics).length * (rowHeight + rowGap) + padding
-  const counterDisplayWidth = padding + keyWidth + columnGap + dataWidth + padding
-  draw.rect(
-    margin,
-    height - margin - counterDisplayHeight,
-    counterDisplayWidth,
-    counterDisplayHeight,
-    rgba(0, 120)
+  const count = Object.keys(countMetrics).map((s, i) => {
+    const color = i % 2 ? "#00000000" : "#00000040"
+    const con = new UIContainer(
+      [new UIText(s + "", "bold 24px sans-serif", "#ffffff")],
+      0,
+      "column",
+      color,
+      8
+    )
+    con.width = 234
+    return con
+  })
+  const metric = Object.values(countMetrics).map((s, i) => {
+    const color = i % 2 ? "#00000000" : "#00000040"
+    const con = new UIContainer(
+      [new UIText(s + "", "bold 24px sans-serif", "#ffffff")],
+      0,
+      "column",
+      color,
+      8
+    )
+    con.width = 170
+    return con
+  })
+  const full = new UIContainer(
+    [
+      new UIContainer(count, 0, "column", "#00000090", 0),
+      new UIContainer(metric, 0, "column", "#00000090", 0),
+    ],
+    0,
+    "row",
+    "#00000000",
+    0
   )
-  let dy = height - margin - counterDisplayHeight + padding
-  let i = 0
-  for (const metric in countMetrics) {
-    if (i % 2 === 0) draw.rect(margin, dy, counterDisplayWidth, rowHeight, rgba(0, 0, 0, 50))
-    draw.text(metric + ":", start, dy)
-    draw.text(countMetrics[metric] + "", start + keyWidth + columnGap, dy)
-    dy += rowHeight + rowGap
-    i++
-  }
+  full.draw(-width / 2 + 8, height / 2 - full.height - 8)
 
   ticks += 1
 
