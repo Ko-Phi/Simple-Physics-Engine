@@ -1,20 +1,22 @@
 import { ctx, draw, height, width } from "../Globals/init.js";
 export class UIText {
     text;
-    font;
-    fill;
     width;
     height;
-    constructor(text, font, fill) {
+    font = "bold 24px sans-serif";
+    fill = "#ffffff";
+    constructor(text, options) {
         this.text = text;
-        this.font = font;
-        this.fill = fill;
+        Object.assign(this, options);
         ctx.save();
         ctx.font = this.font;
+        ctx.textBaseline = "top";
+        ctx.textAlign = "left";
         const { width, hangingBaseline, alphabeticBaseline } = ctx.measureText(text);
         this.width = width;
         this.height = Math.abs(hangingBaseline + alphabeticBaseline);
         ctx.restore();
+        Object.assign(this, options);
     }
     draw(x = 0, y = 0) {
         ctx.save();
@@ -26,32 +28,30 @@ export class UIText {
 }
 export class UIContainer {
     elements;
-    gap;
-    direction;
-    fill;
-    padding;
     width;
     height;
-    constructor(elements, gap = 8, direction = "column", fill = "#00000000", padding = 8) {
+    padding = 8;
+    gap = 8;
+    direction = "column";
+    fill = "#00000000";
+    constructor(elements, options) {
         this.elements = elements;
-        this.gap = gap;
-        this.direction = direction;
-        this.fill = fill;
-        this.padding = padding;
+        Object.assign(this, options);
         if (this.direction === "column") {
-            this.width = Math.max(...this.elements.map((e) => e.width)) + 2 * padding;
+            this.width = Math.max(...this.elements.map((e) => e.width)) + 2 * this.padding;
             this.height =
                 (this.elements.length - 1) * this.gap +
                     this.elements.reduce((acc, e) => e.height + acc, 0) +
-                    2 * padding;
+                    2 * this.padding;
         }
         else {
-            this.height = Math.max(...this.elements.map((e) => e.height)) + 2 * padding;
+            this.height = Math.max(...this.elements.map((e) => e.height)) + 2 * this.padding;
             this.width =
                 (this.elements.length - 1) * this.gap +
                     this.elements.reduce((acc, e) => e.width + acc, 0) +
-                    2 * padding;
+                    2 * this.padding;
         }
+        Object.assign(this, options);
     }
     draw(x = 0, y = 0) {
         ctx.save();

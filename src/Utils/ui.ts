@@ -9,17 +9,22 @@ interface UIElement {
 export class UIText implements UIElement {
   width: number
   height: number
+  font: string = "bold 24px sans-serif"
+  fill: string = "#ffffff"
   constructor(
     public text: string,
-    public font: string,
-    public fill: string
+    options?: Partial<{ font: string; fill: string; width: number }>
   ) {
+    Object.assign(this, options)
     ctx.save()
     ctx.font = this.font
+    ctx.textBaseline = "top"
+    ctx.textAlign = "left"
     const { width, hangingBaseline, alphabeticBaseline } = ctx.measureText(text)
     this.width = width
     this.height = Math.abs(hangingBaseline + alphabeticBaseline)
     ctx.restore()
+    Object.assign(this, options)
   }
   draw(x: number = 0, y: number = 0) {
     ctx.save()
@@ -33,26 +38,29 @@ export class UIText implements UIElement {
 export class UIContainer implements UIElement {
   width: number
   height: number
+  padding: number = 8
+  gap: number = 8
+  direction: "column" | "row" = "column"
+  fill: string = "#00000000"
   constructor(
     public elements: UIElement[],
-    public gap: number = 8,
-    public direction: "column" | "row" = "column",
-    public fill: string = "#00000000",
-    public padding: number = 8
+    options?: Partial<UIContainer>
   ) {
+    Object.assign(this, options)
     if (this.direction === "column") {
-      this.width = Math.max(...this.elements.map((e) => e.width)) + 2 * padding
+      this.width = Math.max(...this.elements.map((e) => e.width)) + 2 * this.padding
       this.height =
         (this.elements.length - 1) * this.gap +
         this.elements.reduce((acc, e) => e.height + acc, 0) +
-        2 * padding
+        2 * this.padding
     } else {
-      this.height = Math.max(...this.elements.map((e) => e.height)) + 2 * padding
+      this.height = Math.max(...this.elements.map((e) => e.height)) + 2 * this.padding
       this.width =
         (this.elements.length - 1) * this.gap +
         this.elements.reduce((acc, e) => e.width + acc, 0) +
-        2 * padding
+        2 * this.padding
     }
+    Object.assign(this, options)
   }
   draw(x: number = 0, y: number = 0) {
     ctx.save()

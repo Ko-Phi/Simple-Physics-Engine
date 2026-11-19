@@ -56,6 +56,7 @@ export class Draw {
     this.ctx.fill()
     this.ctx.stroke()
   }
+
   text(
     str: string,
     x: number,

@@ -34,3 +34,6 @@ class Camera {
     }
 }
 export const cam = new Camera({ position: new Vector(0, 0) });
+export const bg = "#00000080";
+export const nill = "#00000000";
+export const layr = "#00000040";

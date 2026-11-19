@@ -81,3 +81,10 @@ export class Vector {
   display = () => rounD(this.x, 3) + ", " + rounD(this.y, 3)
   equalTo = (v: Vector, scale: number = 1e-6): boolean => this.subtract(v).getMag() < scale
 }
+export const camelToTitle = (str: string) => {
+  const spaced = str
+    .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z\d]+)/g, "$1 $2")
+
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}

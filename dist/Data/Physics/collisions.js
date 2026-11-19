@@ -190,7 +190,7 @@ function getContacts(refA, refB) {
             hitbox.transformedVertices.forEach((A) => {
                 zipShift(otherHitbox.transformedVertices).forEach(([B, C]) => {
                     const curr = project(A, B, C);
-                    if (nearlyEqual(minDistSq, curr.distSq, 5) && !pair1.point.equalTo(curr.point))
+                    if (nearlyEqual(minDistSq, curr.distSq, 10) && !pair1.point.equalTo(curr.point))
                         pair2 = curr;
                     else
                         pair1 = minBy((x) => x.distSq, pair1, curr);
@@ -198,7 +198,7 @@ function getContacts(refA, refB) {
             });
         });
         contacts =
-            !nearlyEqual(pair1.distSq, pair2.distSq, 5) || pair1.point.equalTo(pair2.point)
+            !nearlyEqual(pair1.distSq, pair2.distSq, 10) || pair1.point.equalTo(pair2.point)
                 ? [pair1.point]
                 : [pair1.point, pair2.point];
     }

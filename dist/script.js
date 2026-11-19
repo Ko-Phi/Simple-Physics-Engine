@@ -1,6 +1,6 @@
 import { Vector, sq, random, rgba } from "./Utils/math.js";
 import { keys, mouse } from "./Globals/input.js";
-import { cam, draw, ctx, width, height, setFocus, worldWidth, worldHeight } from "./Globals/init.js";
+import { cam, draw, ctx, width, height, setFocus, worldWidth, worldHeight, bg, layr, nill, } from "./Globals/init.js";
 import * as Settings from "./Globals/settings.js";
 import { SpatialHashGrid } from "./Data/Physics/spatialHashGrid.js";
 const world = new SpatialHashGrid(Settings.gridSize, new Vector(width, height));
@@ -39,6 +39,26 @@ const collisionSet = new Set();
 let collisionChecks = 0;
 let ME = 0;
 const totalCells = (worldWidth * worldHeight) / Settings.gridSize ** 2;
+let countMetrics = {
+    "Cells Filled": world.grid.size + " / " + totalCells,
+    "Cells Checked": world.cellsChecked + " / " + totalCells,
+    "SAT Calls": collisionChecks,
+    "Object Count": boxes.length,
+    "Collision Count": collisions.length,
+    "Mechanical Energy": ME.toFixed(3),
+};
+const count = Object.keys(countMetrics).map((s, i) => new UIContainer([new UIText(s + "")], {
+    fill: i % 2 ? nill : layr,
+    width: 234,
+}));
+const metric = Object.values(countMetrics).map((s, i) => new UIContainer([new UIText(s + "")], {
+    fill: i % 2 ? nill : layr,
+    width: 170,
+}));
+const full = new UIContainer([
+    new UIContainer(count, { fill: bg, padding: 0, gap: 0 }),
+    new UIContainer(metric, { fill: bg, padding: 0, gap: 0 }),
+], { direction: "row", padding: 0, gap: 0 });
 let lastTime = 0;
 function drawLoop(timestamp) {
     if (ctx === null)
@@ -144,13 +164,10 @@ function drawLoop(timestamp) {
     }
     Perf.updateMetric("handleCollisions");
     Perf.getTotal();
-    ctx.resetTransform();
     if (ticks % 60 === 0)
         Perf.updateMetrics();
-    Perf.draw(["average", "max", "percentage"], dt);
-    draw.text("", 0, 0);
-    ctx.resetTransform();
-    let countMetrics = {
+    Perf.draw();
+    countMetrics = {
         "Cells Filled": world.grid.size + " / " + totalCells,
         "Cells Checked": world.cellsChecked + " / " + totalCells,
         "SAT Calls": collisionChecks,
@@ -158,22 +175,14 @@ function drawLoop(timestamp) {
         "Collision Count": collisions.length,
         "Mechanical Energy": ME.toFixed(3),
     };
-    const count = Object.keys(countMetrics).map((s, i) => {
-        const color = i % 2 ? "#00000000" : "#00000040";
-        const con = new UIContainer([new UIText(s + "", "bold 24px sans-serif", "#ffffff")], 0, "column", color, 8);
-        con.width = 234;
-        return con;
-    });
-    const metric = Object.values(countMetrics).map((s, i) => {
-        const color = i % 2 ? "#00000000" : "#00000040";
-        const con = new UIContainer([new UIText(s + "", "bold 24px sans-serif", "#ffffff")], 0, "column", color, 8);
+    full.elements[1] = new UIContainer(Object.values(countMetrics).map((s, i) => {
+        const color = i % 2 ? nill : layr;
+        const con = new UIContainer([new UIText(s + "")], {
+            fill: color,
+        });
         con.width = 170;
         return con;
-    });
-    const full = new UIContainer([
-        new UIContainer(count, 0, "column", "#00000090", 0),
-        new UIContainer(metric, 0, "column", "#00000090", 0),
-    ], 0, "row", "#00000000", 0);
+    }), { fill: bg, padding: 0, gap: 0 });
     full.draw(-width / 2 + 8, height / 2 - full.height - 8);
     ticks += 1;
     requestAnimationFrame(drawLoop);
